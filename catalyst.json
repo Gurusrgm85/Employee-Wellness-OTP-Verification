@@ -5,5 +5,11 @@
     ],
     "ignore": [],
     "source": "functions"
-  }
+  },
+  "slate": [
+    {
+      "name": "otp-frontend",
+      "source": "./"
+    }
+  ]
 }
