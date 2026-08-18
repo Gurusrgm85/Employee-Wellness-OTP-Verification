@@ -82,58 +82,66 @@ export async function getValidAccessToken(forceRefresh = false) {
  * Auto-refreshes Zoho access token using refresh_token
  */
 export async function refreshAccessToken() {
+  console.log('🔄 Auto-refreshing Zoho Access Token...');
+
+  // 1. Try internal Vite server auto-refresh plugin (also persists to .env)
+  try {
+    const serverRes = await fetch('/api/refresh-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    const serverData = await serverRes.json();
+    if (serverData.access_token) {
+      memoryAccessToken = serverData.access_token;
+      const expiresAt = Date.now() + (serverData.expires_in ? serverData.expires_in * 1000 : 3600 * 1000);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...serverData, expires_at: expiresAt }));
+      } catch (e) {}
+
+      console.log('✅ Access Token auto-generated & saved successfully!');
+      return serverData.access_token;
+    }
+  } catch (serverErr) {
+    console.warn('Vite auto-refresh gateway notice:', serverErr);
+  }
+
+  // 2. Direct browser fallback via proxy
   const refreshToken = CONFIG.refreshToken;
   const clientId = CONFIG.clientId;
   const clientSecret = CONFIG.clientSecret;
 
-  if (!refreshToken) {
-    if (memoryAccessToken) return memoryAccessToken;
-    throw new Error('Missing REFRESH_TOKEN in .env. Please check configuration.');
-  }
+  if (refreshToken) {
+    try {
+      const endpoint = import.meta.env.DEV
+        ? '/zoho-oauth/oauth/v2/token'
+        : `${CONFIG.accountsUrl.replace(/\/$/, '')}/oauth/v2/token`;
 
-  const endpoint = import.meta.env.DEV
-    ? '/zoho-oauth/oauth/v2/token'
-    : `${CONFIG.accountsUrl.replace(/\/$/, '')}/oauth/v2/token`;
+      const params = new URLSearchParams({
+        refresh_token: refreshToken,
+        grant_type: 'refresh_token',
+      });
 
-  const params = new URLSearchParams({
-    refresh_token: refreshToken,
-    grant_type: 'refresh_token',
-  });
+      if (clientId) params.append('client_id', clientId);
+      if (clientSecret) params.append('client_secret', clientSecret);
 
-  if (clientId) params.append('client_id', clientId);
-  if (clientSecret) params.append('client_secret', clientSecret);
+      const response = await fetch(`${endpoint}?${params.toString()}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      });
 
-  console.log('🔄 Auto-refreshing Zoho Access Token...');
-
-  try {
-    const response = await fetch(`${endpoint}?${params.toString()}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-    });
-
-    const data = await response.json();
-
-    if (data.access_token) {
-      memoryAccessToken = data.access_token;
-      const expiresAt = Date.now() + (data.expires_in ? data.expires_in * 1000 : 3600 * 1000);
-      const payload = {
-        ...data,
-        expires_at: expiresAt,
-      };
-
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-      } catch (e) {
-        console.warn('Could not save token to localStorage:', e);
+      const data = await response.json();
+      if (data.access_token) {
+        memoryAccessToken = data.access_token;
+        const expiresAt = Date.now() + (data.expires_in ? data.expires_in * 1000 : 3600 * 1000);
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...data, expires_at: expiresAt }));
+        } catch (e) {}
+        return data.access_token;
       }
-
-      console.log('✅ Access Token refreshed successfully!');
-      return data.access_token;
+    } catch (directErr) {
+      console.warn('Direct refresh notice:', directErr);
     }
-  } catch (refreshErr) {
-    console.warn('Token auto-refresh notice:', refreshErr);
   }
 
   return memoryAccessToken || CONFIG.initialAccessToken;
