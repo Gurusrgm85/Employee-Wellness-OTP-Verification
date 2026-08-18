@@ -6,6 +6,8 @@
 const STORAGE_KEY = 'zoho_crm_token_info_v5';
 
 // Environment Configuration
+const CATALYST_FUNCTION_URL = 'https://project-rainfall-60072062952.development.catalystserverless.in/server/otp_backend';
+
 const CONFIG = {
   clientId: import.meta.env.CLIENT_ID || import.meta.env.VITE_CLIENT_ID || '',
   clientSecret: import.meta.env.CLIENT_SECRET || import.meta.env.VITE_CLIENT_SECRET || '',
@@ -13,6 +15,7 @@ const CONFIG = {
   accountsUrl: import.meta.env.ACCOUNTS_URL || import.meta.env.VITE_ACCOUNTS_URL || 'https://accounts.zoho.in',
   apiDomain: import.meta.env.API_DOMAIN || import.meta.env.VITE_API_DOMAIN || 'https://www.zohoapis.in',
   initialAccessToken: import.meta.env.ACCESS_TOKEN || import.meta.env.VITE_ACCESS_TOKEN || '',
+  backendUrl: import.meta.env.VITE_BACKEND_URL || CATALYST_FUNCTION_URL,
 };
 
 // In-memory active token cache
@@ -153,6 +156,32 @@ export async function refreshAccessToken() {
  * @param {object} argsObj - Arguments to pass to the function (e.g. { phone, email, name })
  */
 export async function executeDelugeFunction(functionName = 'otp1', argsObj = {}, isRetry = false) {
+  // 1. If Catalyst Backend function is configured, use it for secure execution & auto-refresh
+  if (CONFIG.backendUrl) {
+    try {
+      const backendEndpoint = `${CONFIG.backendUrl.replace(/\/$/, '')}/zoho/execute-function`;
+      console.log(`⚡ [Catalyst Function] Executing Deluge [${functionName}] via backend:`, backendEndpoint);
+
+      const res = await fetch(backendEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ functionName, args: argsObj }),
+      });
+
+      const result = await res.json();
+      if (!res.ok || result.status === 'error') {
+        throw new Error(result.message || `Backend function execution failed with status ${res.status}`);
+      }
+      return result;
+    } catch (backendErr) {
+      console.warn('Catalyst backend execution failed, falling back to direct API:', backendErr);
+      if (!import.meta.env.DEV) {
+        throw backendErr;
+      }
+    }
+  }
+
+  // 2. Direct browser fallback via proxy
   const accessToken = await getValidAccessToken(isRetry);
   const encodedArgs = encodeURIComponent(JSON.stringify(argsObj));
 
@@ -232,7 +261,32 @@ export async function createPatientRecord(formData, isRetry = false) {
     }
   }
 
-  // 2. REST API Method via configured proxy
+  // 2. If Catalyst Backend function is configured, use it for secure record creation & auto-refresh
+  if (CONFIG.backendUrl) {
+    try {
+      const backendEndpoint = `${CONFIG.backendUrl.replace(/\/$/, '')}/zoho/create-patient`;
+      console.log(`📤 [Catalyst Function] Creating Patient Record via backend:`, backendEndpoint);
+
+      const res = await fetch(backendEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ formData }),
+      });
+
+      const result = await res.json();
+      if (!res.ok) {
+        throw new Error(result.error || result.message || `Backend patient creation failed with status ${res.status}`);
+      }
+      return result;
+    } catch (backendErr) {
+      console.warn('Catalyst backend patient creation failed, falling back to direct REST API:', backendErr);
+      if (!import.meta.env.DEV) {
+        throw backendErr;
+      }
+    }
+  }
+
+  // 3. REST API Method via configured proxy
   const accessToken = await getValidAccessToken(isRetry);
   const payload = {
     data: [patientRecord],

@@ -1,0 +1,21 @@
+{
+	"deployment": {
+		"name": "otp_backend",
+		"stack": "node20",
+		"type": "advancedio",
+		"env_variables": {
+			"ACCESS_TOKEN": "1000.ad2b63340eff679715aa20212710eae9.f39b607101fb863d8332d495637530f6",
+			"REFRESH_TOKEN": "1000.a20e86c2423cd7d77fc19abaa4a0a5e8.d3263900c7b6fc808b97f9da59ca7f95",
+			"SCOPES": "ZohoCRM.functions.execute.READ,ZohoCRM.functions.execute.CREATE,ZohoCRM.modules.ALL",
+			"API_DOMAIN": "https://www.zohoapis.in",
+			"ACCOUNTS_URL": "https://accounts.zoho.in",
+			"TOKEN_TYPE": "Bearer",
+			"EXPIRES_IN": "3600",
+			"CLIENT_ID": "1000.92ERAOM9XDZWXCOYMUY8SCCY1MMKXT",
+			"CLIENT_SECRET": "84e50dadb8c1435ff1398cc7093c59116bde197a04"
+		}
+	},
+	"execution": {
+		"main": "index.js"
+	}
+}
