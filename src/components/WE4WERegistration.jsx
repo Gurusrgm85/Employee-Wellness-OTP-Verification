@@ -27,10 +27,10 @@ const PROGRAMME_FEATURES = [
 export default function WE4WERegistration() {
   const [email, setEmail] = useState('');
 
-  // Consent Ledgers
-  const [consentA, setConsentA] = useState([false, false, false, false]);
+  // Consent Ledgers — Default checked
+  const [consentA, setConsentA] = useState([true, true, true, true]);
   const [enrolYes, setEnrolYes] = useState(true);
-  const [consentB, setConsentB] = useState([false, false, false, false, false]);
+  const [consentB, setConsentB] = useState([true, true, true, true, true]);
 
   // OTP Verification State
   const [isSending, setIsSending] = useState(false);
@@ -81,38 +81,9 @@ export default function WE4WERegistration() {
     }
   }, [codeSent]);
 
-  // Toggle individual consent item
-  const toggleConsent = (type, index) => {
-    if (isDone) return;
-    if (type === 'A') {
-      const newA = [...consentA];
-      newA[index] = !newA[index];
-      setConsentA(newA);
-    } else {
-      const newB = [...consentB];
-      newB[index] = !newB[index];
-      setConsentB(newB);
-    }
-    setErrorMessage('');
-  };
-
-  // Toggle all items in a ledger
-  const toggleAll = (type) => {
-    if (isDone) return;
-    if (type === 'A') {
-      const allChecked = consentA.every(Boolean);
-      setConsentA(consentA.map(() => !allChecked));
-    } else {
-      const allChecked = consentB.every(Boolean);
-      setConsentB(consentB.map(() => !allChecked));
-    }
-    setErrorMessage('');
-  };
-
   const allAChecked = consentA.every(Boolean);
   const allBChecked = !enrolYes || consentB.every(Boolean);
   const gateOpen = allAChecked && allBChecked;
-  const totalRequired = enrolYes ? 9 : 4;
 
   // Handle OTP digit entry
   const handleDigitChange = (index, value) => {
@@ -150,15 +121,15 @@ export default function WE4WERegistration() {
     }
   };
 
-  // 1. Send OTP via Deluge Function
+  // 1. Send OTP via Deluge Function (only triggered once)
   const handleSendCode = async () => {
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setErrorMessage('Please enter a valid work email address.');
+    if (!gateOpen) {
+      setErrorMessage('Please ensure all required consent statements are checked.');
       return;
     }
 
-    if (!gateOpen) {
-      setErrorMessage('Please tick all required consent statements before requesting code.');
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setErrorMessage('Please enter a valid work email address.');
       return;
     }
 
@@ -226,7 +197,7 @@ export default function WE4WERegistration() {
     setErrorMessage('');
 
     try {
-      // Create Record in Zoho CRM Patient Module (Deluge function otp1 is only triggered once during Send code)
+      // Create Record in Zoho CRM Patient Module
       console.log('✅ OTP Verified! Creating patient record in Zoho CRM...');
       const patientPayload = {
         firstName: email.split('@')[0] || 'Employee',
@@ -254,29 +225,12 @@ export default function WE4WERegistration() {
     }
   };
 
-  // Reset form
-  const handleReset = () => {
-    setEmail('');
-    setConsentA([false, false, false, false]);
-    setEnrolYes(true);
-    setConsentB([false, false, false, false, false]);
-    setCodeSent(false);
-    setOtpDigits(['', '', '', '', '', '']);
-    setResendSecs(0);
-    setExpirySecs(600);
-    setErrorMessage('');
-    setIsDone(false);
-    setRefId('');
-    setCreatedRecordId('');
-    setSignedAt('');
-  };
-
   return (
     <div className="we-page-wrapper">
       <div className="we-sheet">
         {/* Header Block */}
         <div>
-          <div className="we-header-sub">Employee instructions &amp; privacy consent</div>
+          <div className="we-header-sub">Health Camp Registrations and Privacy Consents</div>
           <h1 className="we-header-title">Blood screening registration</h1>
           <div className="we-header-desc">
             Welcome to WE4WE (Wellness Engineered for Workplace Excellence). Participation is voluntary. Purpose:
@@ -291,35 +245,27 @@ export default function WE4WERegistration() {
           management — only anonymised aggregate reports may be used for wellness planning.
         </div>
 
-        {/* Privacy Consent Ledger (Section A) */}
+        {/* Privacy Consent Ledger (Section A) — Read Only */}
         {!isDone && (
           <div>
             <div className="we-ledger-header">
               <div className="we-section-label" style={{ margin: 0 }}>
                 Privacy consent ledger
               </div>
-              <div className="we-ledger-actions">
-                <button type="button" onClick={() => toggleAll('A')} className="we-select-all-btn">
-                  {allAChecked ? 'Clear all' : 'Select all'}
-                </button>
-              </div>
             </div>
 
             {LABELS_A.map((label, i) => (
               <div key={i} className="we-consent-row">
-                <button
-                  type="button"
-                  onClick={() => toggleConsent('A', i)}
-                  className={`we-checkbox-btn ${consentA[i] ? 'checked' : ''}`}
+                <div
+                  className={`we-checkbox-btn checked`}
+                  style={{ cursor: 'default', pointerEvents: 'none' }}
                   aria-label={label}
                 >
-                  {consentA[i] && (
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </button>
-                <div className="we-consent-label" onClick={() => toggleConsent('A', i)}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <div className="we-consent-label" style={{ cursor: 'default' }}>
                   {label}
                 </div>
               </div>
@@ -381,28 +327,20 @@ export default function WE4WERegistration() {
                     <div className="we-section-label" style={{ margin: 0 }}>
                       Enrolment consent ledger
                     </div>
-                    <div className="we-ledger-actions">
-                      <button type="button" onClick={() => toggleAll('B')} className="we-select-all-btn">
-                        {consentB.every(Boolean) ? 'Clear all' : 'Select all'}
-                      </button>
-                    </div>
                   </div>
 
                   {LABELS_B.map((label, i) => (
                     <div key={i} className="we-consent-row">
-                      <button
-                        type="button"
-                        onClick={() => toggleConsent('B', i)}
-                        className={`we-checkbox-btn ${consentB[i] ? 'checked' : ''}`}
+                      <div
+                        className={`we-checkbox-btn checked`}
+                        style={{ cursor: 'default', pointerEvents: 'none' }}
                         aria-label={label}
                       >
-                        {consentB[i] && (
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                      </button>
-                      <div className="we-consent-label" onClick={() => toggleConsent('B', i)}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <div className="we-consent-label" style={{ cursor: 'default' }}>
                         {label}
                       </div>
                     </div>
@@ -428,16 +366,17 @@ export default function WE4WERegistration() {
                 <input
                   type="email"
                   className="we-input"
-                  placeholder="firstname.lastname@company.com"
+                  placeholder={gateOpen ? "firstname.lastname@company.com" : "All consents must be accepted"}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  disabled={codeSent || isSending}
+                  disabled={!gateOpen || codeSent || isSending}
+                  readOnly={!gateOpen}
                 />
               </div>
               <button
                 type="button"
                 onClick={handleSendCode}
-                disabled={codeSent || isSending || !email}
+                disabled={!gateOpen || codeSent || isSending || !email}
                 className="we-btn we-btn-primary"
               >
                 {isSending ? (
