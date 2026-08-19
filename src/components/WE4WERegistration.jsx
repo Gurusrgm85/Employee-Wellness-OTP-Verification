@@ -256,8 +256,7 @@ export default function WE4WERegistration() {
       <div className="we-sheet">
         {/* Header Block */}
         <div>
-          <div className="we-header-sub">Health Camp Registrations and Privacy Consents</div>
-          <h1 className="we-header-title">Blood screening registration</h1>
+          <h1 className="we-header-title">Health Camp Registrations and Privacy Consents</h1>
           <div className="we-header-desc">
             Welcome to WE4WE (Wellness Engineered for Workplace Excellence). Participation is voluntary. Purpose:
             registration for blood screening and/or enrolment into the WE4WE wellness programme.
