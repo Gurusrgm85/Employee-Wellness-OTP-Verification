@@ -476,7 +476,7 @@ export default function WE4WERegistration() {
             </div>
 
             {/* Work Email & Send Button */}
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap', marginTop: '12px', maxWidth: '640px' }}>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', flexWrap: 'wrap', marginTop: '12px', maxWidth: '640px' }}>
               <div style={{ flex: '1 1 240px', maxWidth: '360px' }} onClick={!gateOpen ? handleBlockedFieldClick : undefined}>
                 <div style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--ink-700)', marginBottom: '6px' }}>
                   Work email address <span className="we-req">*</span>
@@ -492,12 +492,44 @@ export default function WE4WERegistration() {
                   readOnly={!gateOpen || codeSent || isSending}
                   style={!gateOpen ? { cursor: 'pointer' } : {}}
                 />
+
+                {/* Live Email Preview */}
+                {email && !codeSent && (
+                  <div
+                    onClick={() => {
+                      if (gateOpen && !codeSent && !isSending) {
+                        const prefix = email.split('@')[0];
+                        if (prefix) setEmail(`${prefix}@zohocorp.com`);
+                      }
+                    }}
+                    style={{
+                      marginTop: '6px',
+                      fontSize: '12px',
+                      color: 'var(--brand-600)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      wordBreak: 'break-all',
+                    }}
+                    title="Click to apply"
+                  >
+                    <span>
+                      {email.includes('@')
+                        ? email.toLowerCase().endsWith('@zohocorp.com')
+                          ? email
+                          : `${email.split('@')[0]}@zohocorp.com`
+                        : `${email}@zohocorp.com`}
+                    </span>
+                  </div>
+                )}
               </div>
               <button
                 type="button"
                 onClick={handleSendCode}
                 disabled={codeSent || isSending}
                 className="we-btn we-btn-primary"
+                style={{ marginTop: '22px' }}
               >
                 {isSending ? (
                   <>
