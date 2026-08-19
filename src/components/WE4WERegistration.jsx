@@ -414,7 +414,7 @@ export default function WE4WERegistration() {
 
             <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap', marginTop: '6px' }}>
               <div style={{ flex: 1, minWidth: '240px' }}>
-                <div style={{ font: '600 12px/1.4 var(--font-body)', color: 'var(--ink-700)', marginBottom: '6px' }}>
+                <div style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--ink-700)', marginBottom: '6px' }}>
                   Work email address <span className="we-req">*</span>
                 </div>
                 <input
@@ -448,8 +448,8 @@ export default function WE4WERegistration() {
             {codeSent && (
               <div style={{ marginTop: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '16px', flexWrap: 'wrap' }}>
-                  <div style={{ font: '700 12px/1.4 var(--font-body)', color: 'var(--ink-700)' }}>Enter the 6-digit code</div>
-                  <div style={{ font: '700 12px/1.4 var(--font-body)', color: 'var(--ink-500)', fontVariantNumeric: 'tabular-nums' }}>
+                  <div style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--ink-700)' }}>Enter the 6-digit code</div>
+                  <div style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--ink-500)', fontVariantNumeric: 'tabular-nums' }}>
                     {expirySecs > 0 ? `Expires in ${formatMMSS(expirySecs)}` : 'Code expired'}
                   </div>
                 </div>
@@ -511,7 +511,7 @@ export default function WE4WERegistration() {
               </svg>
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ font: '700 16px/1.4 var(--font-body)', color: 'var(--ink-900)' }}>
+              <div style={{ font: '500 16px/1.4 var(--font-body)', color: 'var(--ink-900)' }}>
                 Consent signed and registration recorded
               </div>
               <div style={{ font: '400 13px/1.6 var(--font-body)', color: 'var(--ink-600)', marginTop: '6px' }}>
