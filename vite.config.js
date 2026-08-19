@@ -74,20 +74,6 @@ function zohoTokenRefreshPlugin() {
                 const parsed = JSON.parse(data);
                 if (parsed.access_token) {
                   console.log('✅ [Vite Server] Successfully auto-generated fresh Access Token!');
-
-                  // Update .env file automatically
-                  if (fs.existsSync(envPath)) {
-                    let envContent = fs.readFileSync(envPath, 'utf-8');
-                    if (envContent.includes('ACCESS_TOKEN=')) {
-                      envContent = envContent.replace(
-                        /ACCESS_TOKEN=.*/,
-                        `ACCESS_TOKEN=${parsed.access_token}`
-                      );
-                    } else {
-                      envContent = `ACCESS_TOKEN=${parsed.access_token}\n` + envContent;
-                    }
-                    fs.writeFileSync(envPath, envContent, 'utf-8');
-                  }
                 }
 
                 res.statusCode = zohoRes.statusCode;
