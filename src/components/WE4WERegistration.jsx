@@ -340,14 +340,22 @@ export default function WE4WERegistration() {
             <div className="we-toggle-row">
               <button
                 type="button"
-                onClick={() => setEnrolYes(true)}
+                onClick={() => {
+                  setEnrolYes(true);
+                  setConsentB([true, true, true, true, true]);
+                  setErrorMessage('');
+                }}
                 className={`we-btn ${enrolYes ? 'we-btn-primary' : 'we-btn-secondary'}`}
               >
                 Yes, enrol me
               </button>
               <button
                 type="button"
-                onClick={() => setEnrolYes(false)}
+                onClick={() => {
+                  setEnrolYes(false);
+                  setConsentB([false, false, false, false, false]);
+                  setErrorMessage('');
+                }}
                 className={`we-btn ${!enrolYes ? 'we-btn-primary' : 'we-btn-secondary'}`}
               >
                 No, screening only
