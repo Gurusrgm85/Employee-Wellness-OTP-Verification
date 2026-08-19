@@ -255,17 +255,17 @@ export default function WE4WERegistration() {
             </div>
 
             {LABELS_A.map((label, i) => (
-              <div key={i} className="we-consent-row">
+              <div key={i} className="we-consent-row read-only">
                 <div
-                  className={`we-checkbox-btn checked`}
-                  style={{ cursor: 'default', pointerEvents: 'none' }}
+                  className="we-checkbox-btn checked read-only"
+                  title="Mandatory consent"
                   aria-label={label}
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <div className="we-consent-label" style={{ cursor: 'default' }}>
+                <div className="we-consent-label">
                   {label}
                 </div>
               </div>
@@ -330,17 +330,17 @@ export default function WE4WERegistration() {
                   </div>
 
                   {LABELS_B.map((label, i) => (
-                    <div key={i} className="we-consent-row">
+                    <div key={i} className="we-consent-row read-only">
                       <div
-                        className={`we-checkbox-btn checked`}
-                        style={{ cursor: 'default', pointerEvents: 'none' }}
+                        className="we-checkbox-btn checked read-only"
+                        title="Mandatory consent"
                         aria-label={label}
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M5 13l4 4L19 7" />
                         </svg>
                       </div>
-                      <div className="we-consent-label" style={{ cursor: 'default' }}>
+                      <div className="we-consent-label">
                         {label}
                       </div>
                     </div>

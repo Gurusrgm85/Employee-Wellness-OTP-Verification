@@ -329,6 +329,14 @@ body {
   border-color: var(--brand-500);
 }
 
+.we-checkbox-btn.read-only,
+.we-checkbox-btn.checked.read-only,
+.we-consent-row.read-only,
+.we-consent-row.read-only .we-consent-label,
+.we-consent-row.read-only .we-checkbox-btn {
+  cursor: not-allowed !important;
+}
+
 .we-consent-label {
   flex: 1;
   min-width: 0;
