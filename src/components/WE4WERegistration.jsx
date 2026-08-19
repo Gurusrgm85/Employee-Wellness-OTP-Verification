@@ -45,9 +45,14 @@ export default function WE4WERegistration() {
   const [expirySecs, setExpirySecs] = useState(600);
   const [serverOtp, setServerOtp] = useState(null);
 
+  // Section-specific Error States
+  const [verifyError, setVerifyError] = useState('');
+  const [privacyError, setPrivacyError] = useState('');
+  const [enrolError, setEnrolError] = useState('');
+  const [submitError, setSubmitError] = useState('');
+
   // Submission State
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
   const [isDone, setIsDone] = useState(false);
   const [createdRecordId, setCreatedRecordId] = useState('');
   const [refId, setRefId] = useState('');
@@ -56,6 +61,7 @@ export default function WE4WERegistration() {
   const otpInputRefs = useRef([]);
   const privacyLedgerRef = useRef(null);
   const consentCheckboxRef = useRef(null);
+  const enrolCheckboxRef = useRef(null);
   const verifyBlockRef = useRef(null);
 
   const getNowStamp = () => {
@@ -89,6 +95,13 @@ export default function WE4WERegistration() {
     }
   }, [codeSent, isEmailVerified]);
 
+  const clearAllErrors = () => {
+    setVerifyError('');
+    setPrivacyError('');
+    setEnrolError('');
+    setSubmitError('');
+  };
+
   // Auto-scroll to the privacy consent agreement checkbox
   const handleBlockedFieldClick = () => {
     if (!consentAgreed) {
@@ -101,7 +114,7 @@ export default function WE4WERegistration() {
       } else if (privacyLedgerRef.current) {
         privacyLedgerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
-      setErrorMessage('Please accept the privacy consent agreement below to proceed.');
+      setPrivacyError('Please accept the privacy consent agreement below to proceed.');
     }
   };
 
@@ -111,7 +124,7 @@ export default function WE4WERegistration() {
     const newOtp = [...otpDigits];
     newOtp[index] = digit;
     setOtpDigits(newOtp);
-    setErrorMessage('');
+    setVerifyError('');
 
     if (digit && index < 5) {
       otpInputRefs.current[index + 1]?.focus();
@@ -143,24 +156,25 @@ export default function WE4WERegistration() {
 
   // 1. Send OTP via Deluge Function (only triggered once)
   const handleSendCode = async () => {
+    clearAllErrors();
+
     if (!name.trim()) {
-      setErrorMessage('Please enter your Name.');
+      setVerifyError('Please enter your Name.');
       return;
     }
 
     if (!employeeId.trim()) {
-      setErrorMessage('Please enter your Employee ID.');
+      setVerifyError('Please enter your Employee ID.');
       return;
     }
 
     const trimmedEmail = email.trim();
     if (!trimmedEmail || !/^[a-zA-Z0-9._%+-]+@zohocorp\.com$/i.test(trimmedEmail)) {
-      setErrorMessage('Please enter a valid work email ending with @zohocorp.com.');
+      setVerifyError('Please enter a valid work email ending with @zohocorp.com.');
       return;
     }
 
     setIsSending(true);
-    setErrorMessage('');
 
     try {
       console.log('⚡ Requesting OTP via Deluge Function "otp1"...');
@@ -196,7 +210,7 @@ export default function WE4WERegistration() {
       setOtpDigits(['', '', '', '', '', '']);
     } catch (err) {
       console.error('OTP Send Error:', err);
-      setErrorMessage(err.message || 'Failed to dispatch OTP. Please check your network and try again.');
+      setVerifyError(err.message || 'Failed to dispatch OTP. Please check your network and try again.');
     } finally {
       setIsSending(false);
     }
@@ -204,19 +218,21 @@ export default function WE4WERegistration() {
 
   // 2. Verify Email OTP locally/against server OTP (Does NOT create record in CRM yet)
   const handleVerifyOtp = () => {
+    setVerifyError('');
+
     const enteredOtp = otpDigits.join('');
     if (enteredOtp.length < 6) {
-      setErrorMessage('Please enter all 6 digits of the OTP verification code.');
+      setVerifyError('Please enter all 6 digits of the OTP verification code.');
       return;
     }
 
     if (expirySecs === 0) {
-      setErrorMessage('That verification code has expired. Please request a new one.');
+      setVerifyError('That verification code has expired. Please request a new one.');
       return;
     }
 
     if (serverOtp && enteredOtp !== serverOtp) {
-      setErrorMessage('Invalid OTP code. Please enter the correct code received in your email.');
+      setVerifyError('Invalid OTP code. Please enter the correct code received in your email.');
       return;
     }
 
@@ -224,54 +240,69 @@ export default function WE4WERegistration() {
     setTimeout(() => {
       setIsEmailVerified(true);
       setIsVerifyingOtp(false);
-      setErrorMessage('');
+      setVerifyError('');
       console.log('✅ Email verified successfully!');
     }, 400);
   };
 
   // 3. Final Submit Button at Bottom (Creates record in Zoho CRM backend)
   const handleSubmit = async () => {
+    clearAllErrors();
+
     if (!name.trim()) {
-      setErrorMessage('Please enter your Name.');
+      setVerifyError('Please enter your Name.');
       if (verifyBlockRef.current) verifyBlockRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
 
     if (!employeeId.trim()) {
-      setErrorMessage('Please enter your Employee ID.');
+      setVerifyError('Please enter your Employee ID.');
       if (verifyBlockRef.current) verifyBlockRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
 
     const trimmedEmail = email.trim();
     if (!trimmedEmail || !/^[a-zA-Z0-9._%+-]+@zohocorp\.com$/i.test(trimmedEmail)) {
-      setErrorMessage('Please enter a valid work email ending with @zohocorp.com.');
+      setVerifyError('Please enter a valid work email ending with @zohocorp.com.');
       if (verifyBlockRef.current) verifyBlockRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
 
     if (!isEmailVerified) {
       if (!codeSent) {
-        setErrorMessage('Please click "Send code" and verify your email address before submitting.');
+        setVerifyError('Please click "Send code" and verify your email address before submitting.');
       } else {
-        setErrorMessage('Please enter the 6-digit OTP and click "Verify code" to verify your email.');
+        setVerifyError('Please enter the 6-digit OTP and click "Verify code" to verify your email.');
       }
       if (verifyBlockRef.current) verifyBlockRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
 
     if (!consentAgreed) {
-      handleBlockedFieldClick();
+      setPrivacyError('Please accept the privacy consent agreement below to proceed.');
+      if (consentCheckboxRef.current) {
+        consentCheckboxRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        consentCheckboxRef.current.classList.remove('we-pulse-highlight');
+        void consentCheckboxRef.current.offsetWidth;
+        consentCheckboxRef.current.classList.add('we-pulse-highlight');
+        setTimeout(() => consentCheckboxRef.current?.classList.remove('we-pulse-highlight'), 1600);
+      }
       return;
     }
 
     if (enrolYes && !enrolConsentAgreed) {
-      setErrorMessage('Please accept the enrolment consent agreement before submitting.');
+      setEnrolError('Please accept the enrolment consent agreement above before submitting.');
+      if (enrolCheckboxRef.current) {
+        enrolCheckboxRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        enrolCheckboxRef.current.classList.remove('we-pulse-highlight');
+        void enrolCheckboxRef.current.offsetWidth;
+        enrolCheckboxRef.current.classList.add('we-pulse-highlight');
+        setTimeout(() => enrolCheckboxRef.current?.classList.remove('we-pulse-highlight'), 1600);
+      }
       return;
     }
 
     setIsSubmitting(true);
-    setErrorMessage('');
 
     try {
       console.log('🚀 Submitting registration to Zoho CRM Health_Camp_Registrations module...');
@@ -294,7 +325,7 @@ export default function WE4WERegistration() {
       setIsDone(true);
     } catch (err) {
       console.error('Submission error:', err);
-      setErrorMessage(err.message || 'Registration failed. Please try again.');
+      setSubmitError(err.message || 'Registration failed. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -313,7 +344,7 @@ export default function WE4WERegistration() {
     setOtpDigits(['', '', '', '', '', '']);
     setResendSecs(0);
     setExpirySecs(600);
-    setErrorMessage('');
+    clearAllErrors();
     setIsDone(false);
     setRefId('');
     setCreatedRecordId('');
@@ -364,7 +395,10 @@ export default function WE4WERegistration() {
                   className="we-input"
                   placeholder="e.g. Emily Davis"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    setVerifyError('');
+                  }}
                   disabled={isEmailVerified || isSending}
                 />
               </div>
@@ -378,7 +412,10 @@ export default function WE4WERegistration() {
                   className="we-input"
                   placeholder="e.g. 0269"
                   value={employeeId}
-                  onChange={(e) => setEmployeeId(e.target.value)}
+                  onChange={(e) => {
+                    setEmployeeId(e.target.value);
+                    setVerifyError('');
+                  }}
                   disabled={isEmailVerified || isSending}
                 />
               </div>
@@ -395,7 +432,10 @@ export default function WE4WERegistration() {
                   className="we-input"
                   placeholder="firstname.lastname@zohocorp.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setVerifyError('');
+                  }}
                   disabled={isEmailVerified || isSending}
                 />
               </div>
@@ -480,8 +520,8 @@ export default function WE4WERegistration() {
               </div>
             )}
 
-            {/* Error Message */}
-            {errorMessage && <div className="we-error-banner">{errorMessage}</div>}
+            {/* Email / Verification Specific Error */}
+            {verifyError && <div className="we-error-banner" style={{ marginTop: '12px' }}>{verifyError}</div>}
           </div>
         )}
 
@@ -513,7 +553,7 @@ export default function WE4WERegistration() {
                 ref={consentCheckboxRef}
                 onClick={() => {
                   setConsentAgreed(!consentAgreed);
-                  setErrorMessage('');
+                  setPrivacyError('');
                 }}
                 className={`we-checkbox-btn ${consentAgreed ? 'checked' : ''}`}
                 aria-label="I have read and agree to all the privacy and consent terms above."
@@ -528,13 +568,16 @@ export default function WE4WERegistration() {
                 className="we-consent-label"
                 onClick={() => {
                   setConsentAgreed(!consentAgreed);
-                  setErrorMessage('');
+                  setPrivacyError('');
                 }}
                 style={{ fontWeight: 500, color: '#000000' }}
               >
                 I have read and agree to all the privacy and consent terms above.
               </div>
             </div>
+
+            {/* Privacy Section Specific Error */}
+            {privacyError && <div className="we-error-banner" style={{ marginTop: '12px' }}>{privacyError}</div>}
           </div>
         )}
 
@@ -554,7 +597,7 @@ export default function WE4WERegistration() {
                 onClick={() => {
                   setEnrolYes(true);
                   setEnrolConsentAgreed(true);
-                  setErrorMessage('');
+                  setEnrolError('');
                 }}
                 className={`we-btn ${enrolYes ? 'we-btn-primary' : 'we-btn-secondary'}`}
               >
@@ -565,7 +608,7 @@ export default function WE4WERegistration() {
                 onClick={() => {
                   setEnrolYes(false);
                   setEnrolConsentAgreed(false);
-                  setErrorMessage('');
+                  setEnrolError('');
                 }}
                 className={`we-btn ${!enrolYes ? 'we-btn-primary' : 'we-btn-secondary'}`}
               >
@@ -608,7 +651,11 @@ export default function WE4WERegistration() {
                   <div className="we-consent-row" style={{ border: 'none', padding: '6px 0 0 0' }}>
                     <button
                       type="button"
-                      onClick={() => setEnrolConsentAgreed(!enrolConsentAgreed)}
+                      ref={enrolCheckboxRef}
+                      onClick={() => {
+                        setEnrolConsentAgreed(!enrolConsentAgreed);
+                        setEnrolError('');
+                      }}
                       className={`we-checkbox-btn ${enrolConsentAgreed ? 'checked' : ''}`}
                       aria-label="I have read and agree to all the enrolment consent terms above."
                     >
@@ -620,15 +667,24 @@ export default function WE4WERegistration() {
                     </button>
                     <div
                       className="we-consent-label"
-                      onClick={() => setEnrolConsentAgreed(!enrolConsentAgreed)}
+                      onClick={() => {
+                        setEnrolConsentAgreed(!enrolConsentAgreed);
+                        setEnrolError('');
+                      }}
                       style={{ fontWeight: 500, color: '#000000' }}
                     >
                       I have read and agree to all the enrolment consent terms above.
                     </div>
                   </div>
+
+                  {/* Enrolment Section Specific Error */}
+                  {enrolError && <div className="we-error-banner" style={{ marginTop: '12px' }}>{enrolError}</div>}
                 </div>
               </div>
             )}
+
+            {/* General Submission Error */}
+            {submitError && <div className="we-error-banner" style={{ marginTop: '16px' }}>{submitError}</div>}
 
             {/* Bottom Action Bar: Cancel & Submit Buttons */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', marginTop: '32px' }}>
