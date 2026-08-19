@@ -4,8 +4,8 @@
 		"stack": "node20",
 		"type": "advancedio",
 		"env_variables": {
-			"ACCESS_TOKEN": "1000.ad2b63340eff679715aa20212710eae9.f39b607101fb863d8332d495637530f6",
-			"REFRESH_TOKEN": "1000.a20e86c2423cd7d77fc19abaa4a0a5e8.d3263900c7b6fc808b97f9da59ca7f95",
+			"ACCESS_TOKEN": "1000.bddc68efa41330d7abf0c21fff255da7.7ea4db3099a160ade08243e728419036",
+			"REFRESH_TOKEN": "1000.556a8df39712788b40e39e90c46e7996.6397bd4f24a577f7e916440ee341fbca",
 			"SCOPES": "ZohoCRM.functions.execute.READ,ZohoCRM.functions.execute.CREATE,ZohoCRM.modules.ALL",
 			"API_DOMAIN": "https://www.zohoapis.in",
 			"ACCOUNTS_URL": "https://accounts.zoho.in",
