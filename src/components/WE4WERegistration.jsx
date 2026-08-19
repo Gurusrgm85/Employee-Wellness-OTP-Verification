@@ -511,45 +511,9 @@ export default function WE4WERegistration() {
               </svg>
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ font: '500 16px/1.4 var(--font-body)', color: 'var(--ink-900)' }}>
-                Consent signed and registration recorded
+              <div style={{ font: '500 16px/1.5 var(--font-body)', color: 'var(--ink-900)' }}>
+                Thank you for registering. You will receive a portal invite link shortly.
               </div>
-              <div style={{ font: '400 13px/1.6 var(--font-body)', color: 'var(--ink-600)', marginTop: '6px' }}>
-                {enrolYes
-                  ? 'You are registered for blood screening and enrolled in the WE4WE programme.'
-                  : 'You are registered for blood screening. You did not enrol in the structured programme.'}{' '}
-                A copy of your signed consent has been recorded and registered in Zoho CRM.
-              </div>
-
-              <div className="we-receipt-grid">
-                <div className="we-receipt-tile">
-                  <div className="we-receipt-tile-label">Reference</div>
-                  <div className="we-receipt-tile-value">{refId}</div>
-                </div>
-
-                <div className="we-receipt-tile">
-                  <div className="we-receipt-tile-label">Verified email</div>
-                  <div className="we-receipt-tile-value">{email}</div>
-                </div>
-
-                <div className="we-receipt-tile">
-                  <div className="we-receipt-tile-label">Consents signed</div>
-                  <div className="we-receipt-tile-value">
-                    {totalRequired} at {signedAt}
-                  </div>
-                </div>
-
-                {createdRecordId && (
-                  <div className="we-receipt-tile">
-                    <div className="we-receipt-tile-label">Zoho CRM Record ID</div>
-                    <div className="we-receipt-tile-value">{createdRecordId}</div>
-                  </div>
-                )}
-              </div>
-
-              <button type="button" onClick={handleReset} className="we-btn we-btn-secondary" style={{ marginTop: '20px' }}>
-                Register another employee
-              </button>
             </div>
           </div>
         )}
