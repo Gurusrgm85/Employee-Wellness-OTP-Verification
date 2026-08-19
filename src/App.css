@@ -50,13 +50,13 @@
 
   /* Neutrals */
   --white:       #FFFFFF;
-  --ink-950:     #0A0B12;
-  --ink-900:     #0F172A;
-  --ink-800:     #1E293B;
-  --ink-700:     #334155;
-  --ink-600:     #475569;
-  --ink-500:     #64748B;
-  --ink-400:     #94A3B8;
+  --ink-950:     #000000;
+  --ink-900:     #000000;
+  --ink-800:     #111111;
+  --ink-700:     #1a1a1a;
+  --ink-600:     #222222;
+  --ink-500:     #333333;
+  --ink-400:     #555555;
   --ink-300:     #CBD5E1;
   --ink-200:     #E2E8F0;
   --ink-100:     #F1F5F9;
@@ -178,7 +178,7 @@ body {
 
 .we-header-title {
   font-family: var(--font-display);
-  font-weight: 500;
+  font-weight: 600;
   font-size: 24px;
   line-height: 1.25;
   letter-spacing: -0.01em;
@@ -191,7 +191,7 @@ body {
   font-weight: 400;
   font-size: 14px;
   line-height: 1.6;
-  color: var(--ink-600);
+  color: #000000;
   margin-top: 8px;
   max-width: 72ch;
 }
@@ -206,7 +206,7 @@ body {
   font-weight: 400;
   font-size: 13px;
   line-height: 1.7;
-  color: var(--ink-600);
+  color: #000000;
 }
 
 /* Section Labels */
@@ -344,7 +344,7 @@ body {
   font-weight: 400;
   font-size: 14px;
   line-height: 1.5;
-  color: var(--ink-700);
+  color: #000000;
   cursor: pointer;
   user-select: none;
 }
@@ -360,7 +360,7 @@ body {
   font-weight: 500;
   font-size: 16px;
   line-height: 1.4;
-  color: var(--ink-900);
+  color: #000000;
 }
 
 .we-enrol-desc {
@@ -368,7 +368,7 @@ body {
   font-weight: 400;
   font-size: 14px;
   line-height: 1.6;
-  color: var(--ink-600);
+  color: #000000;
   margin-top: 6px;
   max-width: 70ch;
 }
@@ -399,7 +399,7 @@ body {
   font-weight: 400;
   font-size: 13px;
   line-height: 1.4;
-  color: var(--ink-700);
+  color: #000000;
 }
 
 /* Buttons */
