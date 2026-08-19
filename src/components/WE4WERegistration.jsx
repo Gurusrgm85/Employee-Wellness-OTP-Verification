@@ -438,10 +438,11 @@ export default function WE4WERegistration() {
                 </div>
                 <input
                   type="text"
+                  inputMode="numeric"
                   className="we-input"
-                  placeholder="e.g. EMP-1049"
+                  placeholder="0269"
                   value={employeeId}
-                  onChange={(e) => setEmployeeId(e.target.value)}
+                  onChange={(e) => setEmployeeId(e.target.value.replace(/\D/g, ''))}
                   disabled={!gateOpen || codeSent || isSending}
                   readOnly={!gateOpen}
                 />
