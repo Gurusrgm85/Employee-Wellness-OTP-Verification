@@ -20,6 +20,21 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// The Catalyst gateway answers CORS preflights itself without our headers,
+// so the frontend sends JSON as text/plain (a "simple request" that needs
+// no preflight). Parse those bodies here.
+app.use(express.text({ type: 'text/plain' }));
+app.use((req, res, next) => {
+  if (typeof req.body === 'string' && req.body.trim()) {
+    try {
+      req.body = JSON.parse(req.body);
+    } catch (e) {
+      req.body = {};
+    }
+  }
+  next();
+});
+
 let activeAccessToken = '';
 let tokenExpiresAt = 0;
 

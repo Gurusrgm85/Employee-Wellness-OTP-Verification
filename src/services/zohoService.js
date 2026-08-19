@@ -162,9 +162,11 @@ export async function executeDelugeFunction(functionName = 'otp1', argsObj = {},
       const backendEndpoint = `${CONFIG.backendUrl.replace(/\/$/, '')}/zoho/execute-function`;
       console.log(`⚡ [Catalyst Function] Executing Deluge [${functionName}] via backend:`, backendEndpoint);
 
+      // text/plain keeps this a CORS "simple request" — the Catalyst gateway
+      // swallows preflight OPTIONS requests, so JSON content-type would fail
       const res = await fetch(backendEndpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({ functionName, args: argsObj }),
       });
 
@@ -267,9 +269,10 @@ export async function createPatientRecord(formData, isRetry = false) {
       const backendEndpoint = `${CONFIG.backendUrl.replace(/\/$/, '')}/zoho/create-patient`;
       console.log(`📤 [Catalyst Function] Creating Patient Record via backend:`, backendEndpoint);
 
+      // text/plain avoids the CORS preflight the Catalyst gateway can't answer
       const res = await fetch(backendEndpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({ formData }),
       });
 
