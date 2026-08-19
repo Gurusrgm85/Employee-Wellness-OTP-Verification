@@ -226,20 +226,7 @@ export default function WE4WERegistration() {
     setErrorMessage('');
 
     try {
-      // Verify with Deluge function
-      try {
-        await executeDelugeFunction('otp1', {
-          action: 'verify_otp',
-          email: email,
-          phone: '9876543210',
-          entered_otp: enteredOtp,
-          otp: enteredOtp,
-        });
-      } catch (verifyErr) {
-        console.log('Deluge verify check notice:', verifyErr);
-      }
-
-      // Create Record in Zoho CRM Patient Module
+      // Create Record in Zoho CRM Patient Module (Deluge function otp1 is only triggered once during Send code)
       console.log('✅ OTP Verified! Creating patient record in Zoho CRM...');
       const patientPayload = {
         firstName: email.split('@')[0] || 'Employee',
