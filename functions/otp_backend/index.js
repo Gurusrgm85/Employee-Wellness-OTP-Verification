@@ -77,12 +77,8 @@ async function refreshZohoAccessToken() {
  * Get currently valid access token
  */
 async function getValidAccessToken(force = false) {
-  if (process.env.ACCESS_TOKEN && !activeAccessToken) {
-    activeAccessToken = process.env.ACCESS_TOKEN;
-  }
-
   if (!force && activeAccessToken) {
-    if (tokenExpiresAt === 0 || Date.now() < tokenExpiresAt - 60000) {
+    if (tokenExpiresAt > 0 && Date.now() < tokenExpiresAt - 60000) {
       return activeAccessToken;
     }
   }
