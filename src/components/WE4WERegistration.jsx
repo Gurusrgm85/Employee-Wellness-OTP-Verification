@@ -25,24 +25,12 @@ const PROGRAMME_FEATURES = [
 ];
 
 export default function WE4WERegistration() {
-  // Employee Demographic Fields
-  const [formData, setFormData] = useState({
-    firstName: '',
-    dob: '',
-    gender: 'Female',
-    mobileNo: '',
-    postalCode: '',
-    email: '',
-    address: '',
-  });
+  const [email, setEmail] = useState('');
 
   // Consent Ledgers
   const [consentA, setConsentA] = useState([false, false, false, false]);
-  const [stampA, setStampA] = useState(['', '', '', '']);
-
   const [enrolYes, setEnrolYes] = useState(true);
   const [consentB, setConsentB] = useState([false, false, false, false, false]);
-  const [stampB, setStampB] = useState(['', '', '', '', '']);
 
   // OTP Verification State
   const [isSending, setIsSending] = useState(false);
@@ -96,22 +84,14 @@ export default function WE4WERegistration() {
   // Toggle individual consent item
   const toggleConsent = (type, index) => {
     if (isDone) return;
-    const now = getNowStamp();
-
     if (type === 'A') {
       const newA = [...consentA];
-      const newStamp = [...stampA];
       newA[index] = !newA[index];
-      newStamp[index] = newA[index] ? now : '';
       setConsentA(newA);
-      setStampA(newStamp);
     } else {
       const newB = [...consentB];
-      const newStamp = [...stampB];
       newB[index] = !newB[index];
-      newStamp[index] = newB[index] ? now : '';
       setConsentB(newB);
-      setStampB(newStamp);
     }
     setErrorMessage('');
   };
@@ -119,26 +99,20 @@ export default function WE4WERegistration() {
   // Toggle all items in a ledger
   const toggleAll = (type) => {
     if (isDone) return;
-    const now = getNowStamp();
-
     if (type === 'A') {
       const allChecked = consentA.every(Boolean);
       setConsentA(consentA.map(() => !allChecked));
-      setStampA(stampA.map(() => (allChecked ? '' : now)));
     } else {
       const allChecked = consentB.every(Boolean);
       setConsentB(consentB.map(() => !allChecked));
-      setStampB(stampB.map(() => (allChecked ? '' : now)));
     }
     setErrorMessage('');
   };
 
-  // Gating status logic
   const allAChecked = consentA.every(Boolean);
   const allBChecked = !enrolYes || consentB.every(Boolean);
   const gateOpen = allAChecked && allBChecked;
   const totalRequired = enrolYes ? 9 : 4;
-  const totalTicked = consentA.filter(Boolean).length + (enrolYes ? consentB.filter(Boolean).length : 0);
 
   // Handle OTP digit entry
   const handleDigitChange = (index, value) => {
@@ -178,13 +152,13 @@ export default function WE4WERegistration() {
 
   // 1. Send OTP via Deluge Function
   const handleSendCode = async () => {
-    if (!formData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      setErrorMessage('Please enter a valid email address.');
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setErrorMessage('Please enter a valid work email address.');
       return;
     }
 
     if (!gateOpen) {
-      setErrorMessage('Please tick all required consent statements before sending code.');
+      setErrorMessage('Please tick all required consent statements before requesting code.');
       return;
     }
 
@@ -194,16 +168,15 @@ export default function WE4WERegistration() {
     try {
       console.log('⚡ Requesting OTP via Deluge Function "otp1"...');
       const delugeRes = await executeDelugeFunction('otp1', {
-        email: formData.email,
-        phone: formData.mobileNo || '9876543210',
-        name: formData.firstName || 'Employee',
-        first_name: formData.firstName || 'Employee',
+        email: email,
+        phone: '9876543210',
+        name: email.split('@')[0] || 'Employee',
+        first_name: email.split('@')[0] || 'Employee',
         action: 'send_otp',
       });
 
       console.log('✅ Deluge OTP Response:', delugeRes);
 
-      // Extract OTP if present in output
       const rawOutput = delugeRes?.details?.output;
       let parsed = rawOutput;
       if (typeof rawOutput === 'string') {
@@ -253,12 +226,12 @@ export default function WE4WERegistration() {
     setErrorMessage('');
 
     try {
-      // Step A: Verify with Deluge function
+      // Verify with Deluge function
       try {
         await executeDelugeFunction('otp1', {
           action: 'verify_otp',
-          email: formData.email,
-          phone: formData.mobileNo,
+          email: email,
+          phone: '9876543210',
           entered_otp: enteredOtp,
           otp: enteredOtp,
         });
@@ -266,16 +239,16 @@ export default function WE4WERegistration() {
         console.log('Deluge verify check notice:', verifyErr);
       }
 
-      // Step B: Create Record in Zoho CRM Patient Module
+      // Create Record in Zoho CRM Patient Module
       console.log('✅ OTP Verified! Creating patient record in Zoho CRM...');
       const patientPayload = {
-        firstName: formData.firstName || formData.email.split('@')[0],
-        dob: formData.dob || '1995-08-15',
-        gender: formData.gender || 'Female',
-        email: formData.email,
-        mobileNo: formData.mobileNo || '9876543210',
-        postalCode: formData.postalCode || '600028',
-        address: formData.address || 'WE4WE Workplace Health Facility',
+        firstName: email.split('@')[0] || 'Employee',
+        dob: '1995-08-15',
+        gender: 'Female',
+        email: email,
+        mobileNo: '9876543210',
+        postalCode: '600028',
+        address: 'WE4WE Workplace Health Facility',
       };
 
       const res = await createPatientRecord(patientPayload);
@@ -296,20 +269,10 @@ export default function WE4WERegistration() {
 
   // Reset form
   const handleReset = () => {
-    setFormData({
-      firstName: '',
-      dob: '',
-      gender: 'Female',
-      mobileNo: '',
-      postalCode: '',
-      email: '',
-      address: '',
-    });
+    setEmail('');
     setConsentA([false, false, false, false]);
-    setStampA(['', '', '', '']);
     setEnrolYes(true);
     setConsentB([false, false, false, false, false]);
-    setStampB(['', '', '', '', '']);
     setCodeSent(false);
     setOtpDigits(['', '', '', '', '', '']);
     setResendSecs(0);
@@ -341,88 +304,6 @@ export default function WE4WERegistration() {
           management — only anonymised aggregate reports may be used for wellness planning.
         </div>
 
-        {/* Employee Demographics Section */}
-        {!isDone && (
-          <div>
-            <div className="we-section-label">Employee Details</div>
-            <div className="we-grid-3">
-              <div className="we-form-field">
-                <label className="we-input-label">
-                  First Name <span className="we-req">*</span>
-                </label>
-                <input
-                  type="text"
-                  className="we-input"
-                  placeholder="e.g. Emily"
-                  value={formData.firstName}
-                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                  disabled={codeSent}
-                />
-              </div>
-
-              <div className="we-form-field">
-                <label className="we-input-label">
-                  Date of Birth <span className="we-req">*</span>
-                </label>
-                <input
-                  type="date"
-                  className="we-input"
-                  value={formData.dob}
-                  onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
-                  max={new Date().toISOString().split('T')[0]}
-                  disabled={codeSent}
-                />
-              </div>
-
-              <div className="we-form-field">
-                <label className="we-input-label">
-                  Gender <span className="we-req">*</span>
-                </label>
-                <select
-                  className="we-select"
-                  value={formData.gender}
-                  onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                  disabled={codeSent}
-                >
-                  <option value="Female">Female</option>
-                  <option value="Male">Male</option>
-                  <option value="Other">Other</option>
-                  <option value="Prefer not to say">Prefer not to say</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="we-grid-2" style={{ marginTop: '14px' }}>
-              <div className="we-form-field">
-                <label className="we-input-label">
-                  Mobile Number <span className="we-req">*</span>
-                </label>
-                <input
-                  type="tel"
-                  className="we-input"
-                  placeholder="e.g. 9876543210"
-                  value={formData.mobileNo}
-                  maxLength={10}
-                  onChange={(e) => setFormData({ ...formData, mobileNo: e.target.value.replace(/\D/g, '') })}
-                  disabled={codeSent}
-                />
-              </div>
-
-              <div className="we-form-field">
-                <label className="we-input-label">Postal Code</label>
-                <input
-                  type="text"
-                  className="we-input"
-                  placeholder="e.g. 600028"
-                  value={formData.postalCode}
-                  onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
-                  disabled={codeSent}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Privacy Consent Ledger (Section A) */}
         {!isDone && (
           <div>
@@ -434,9 +315,6 @@ export default function WE4WERegistration() {
                 <button type="button" onClick={() => toggleAll('A')} className="we-select-all-btn">
                   {allAChecked ? 'Clear all' : 'Select all'}
                 </button>
-                <div className="we-section-label" style={{ margin: 0 }}>
-                  Ticked at
-                </div>
               </div>
             </div>
 
@@ -457,7 +335,6 @@ export default function WE4WERegistration() {
                 <div className="we-consent-label" onClick={() => toggleConsent('A', i)}>
                   {label}
                 </div>
-                <div className="we-consent-stamp">{stampA[i] || '—'}</div>
               </div>
             ))}
           </div>
@@ -513,9 +390,6 @@ export default function WE4WERegistration() {
                       <button type="button" onClick={() => toggleAll('B')} className="we-select-all-btn">
                         {consentB.every(Boolean) ? 'Clear all' : 'Select all'}
                       </button>
-                      <div className="we-section-label" style={{ margin: 0 }}>
-                        Ticked at
-                      </div>
                     </div>
                   </div>
 
@@ -536,7 +410,6 @@ export default function WE4WERegistration() {
                       <div className="we-consent-label" onClick={() => toggleConsent('B', i)}>
                         {label}
                       </div>
-                      <div className="we-consent-stamp">{stampB[i] || '—'}</div>
                     </div>
                   ))}
                 </div>
@@ -549,19 +422,10 @@ export default function WE4WERegistration() {
 
         {/* Verification & Sign Block */}
         {!isDone && (
-          <div className="we-verify-block" style={{ opacity: gateOpen ? 1 : 0.6, pointerEvents: gateOpen ? 'auto' : 'none' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '16px', flexWrap: 'wrap' }}>
-              <div className="we-enrol-title">Sign with email verification</div>
-              <div className={`we-gate-chip ${gateOpen ? 'open' : 'locked'}`}>
-                {gateOpen ? `Consents approved · ${totalRequired} of ${totalRequired}` : `Locked · ${totalTicked} of ${totalRequired} consents ticked`}
-              </div>
-            </div>
-            <div className="we-header-desc" style={{ marginTop: '0' }}>
-              A consent record is valid only once it is tied to a verified identity. Entering the six-digit code signs and
-              timestamps every statement ticked above.
-            </div>
+          <div className="we-verify-block">
+            <div className="we-enrol-title">Sign with email verification</div>
 
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap', marginTop: '6px' }}>
               <div style={{ flex: 1, minWidth: '240px' }}>
                 <div style={{ font: '600 12px/1.4 var(--font-body)', color: 'var(--ink-700)', marginBottom: '6px' }}>
                   Work email address <span className="we-req">*</span>
@@ -570,15 +434,15 @@ export default function WE4WERegistration() {
                   type="email"
                   className="we-input"
                   placeholder="firstname.lastname@company.com"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   disabled={codeSent || isSending}
                 />
               </div>
               <button
                 type="button"
                 onClick={handleSendCode}
-                disabled={codeSent || isSending || !formData.email}
+                disabled={codeSent || isSending || !email}
                 className="we-btn we-btn-primary"
               >
                 {isSending ? (
@@ -678,7 +542,7 @@ export default function WE4WERegistration() {
 
                 <div className="we-receipt-tile">
                   <div className="we-receipt-tile-label">Verified email</div>
-                  <div className="we-receipt-tile-value">{formData.email}</div>
+                  <div className="we-receipt-tile-value">{email}</div>
                 </div>
 
                 <div className="we-receipt-tile">
