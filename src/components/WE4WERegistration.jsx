@@ -464,7 +464,7 @@ export default function WE4WERegistration() {
                   type="text"
                   inputMode="numeric"
                   className="we-input"
-                  placeholder="0269"
+                  placeholder="e.g. 0269"
                   value={employeeId}
                   onChange={gateOpen ? (e) => setEmployeeId(e.target.value.replace(/\D/g, '')) : undefined}
                   onClick={!gateOpen ? handleBlockedFieldClick : undefined}
