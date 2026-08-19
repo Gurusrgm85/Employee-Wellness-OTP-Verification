@@ -27,8 +27,8 @@ const PROGRAMME_FEATURES = [
 export default function WE4WERegistration() {
   const [email, setEmail] = useState('');
 
-  // Consent Ledgers — Default checked
-  const [consentA, setConsentA] = useState([true, true, true, true]);
+  // Consent Ledgers: Section A starts unchecked (interactive), Section B starts checked (read-only)
+  const [consentA, setConsentA] = useState([false, false, false, false]);
   const [enrolYes, setEnrolYes] = useState(true);
   const [consentB, setConsentB] = useState([true, true, true, true, true]);
 
@@ -81,6 +81,15 @@ export default function WE4WERegistration() {
     }
   }, [codeSent]);
 
+  // Toggle individual Privacy Consent item (Section A)
+  const toggleConsentA = (index) => {
+    if (isDone) return;
+    const newA = [...consentA];
+    newA[index] = !newA[index];
+    setConsentA(newA);
+    setErrorMessage('');
+  };
+
   const allAChecked = consentA.every(Boolean);
   const allBChecked = !enrolYes || consentB.every(Boolean);
   const gateOpen = allAChecked && allBChecked;
@@ -124,7 +133,7 @@ export default function WE4WERegistration() {
   // 1. Send OTP via Deluge Function (only triggered once)
   const handleSendCode = async () => {
     if (!gateOpen) {
-      setErrorMessage('Please ensure all required consent statements are checked.');
+      setErrorMessage('Please ensure all 4 privacy consent checkboxes are checked.');
       return;
     }
 
@@ -225,6 +234,23 @@ export default function WE4WERegistration() {
     }
   };
 
+  // Reset form
+  const handleReset = () => {
+    setEmail('');
+    setConsentA([false, false, false, false]);
+    setEnrolYes(true);
+    setConsentB([true, true, true, true, true]);
+    setCodeSent(false);
+    setOtpDigits(['', '', '', '', '', '']);
+    setResendSecs(0);
+    setExpirySecs(600);
+    setErrorMessage('');
+    setIsDone(false);
+    setRefId('');
+    setCreatedRecordId('');
+    setSignedAt('');
+  };
+
   return (
     <div className="we-page-wrapper">
       <div className="we-sheet">
@@ -245,7 +271,7 @@ export default function WE4WERegistration() {
           management — only anonymised aggregate reports may be used for wellness planning.
         </div>
 
-        {/* Privacy Consent Ledger (Section A) — Read Only */}
+        {/* Privacy Consent Ledger (Section A) — Interactive, Unchecked on load */}
         {!isDone && (
           <div>
             <div className="we-ledger-header">
@@ -255,10 +281,11 @@ export default function WE4WERegistration() {
             </div>
 
             {LABELS_A.map((label, i) => (
-              <div key={i} className="we-consent-row read-only">
-                <div
-                  className={`we-checkbox-btn ${consentA[i] ? 'checked' : ''} read-only`}
-                  title="Mandatory privacy consent"
+              <div key={i} className="we-consent-row">
+                <button
+                  type="button"
+                  onClick={() => toggleConsentA(i)}
+                  className={`we-checkbox-btn ${consentA[i] ? 'checked' : ''}`}
                   aria-label={label}
                 >
                   {consentA[i] && (
@@ -266,8 +293,8 @@ export default function WE4WERegistration() {
                       <path d="M5 13l4 4L19 7" />
                     </svg>
                   )}
-                </div>
-                <div className="we-consent-label">
+                </button>
+                <div className="we-consent-label" onClick={() => toggleConsentA(i)}>
                   {label}
                 </div>
               </div>
@@ -332,10 +359,14 @@ export default function WE4WERegistration() {
                   </div>
 
                   {LABELS_B.map((label, i) => (
-                    <div key={i} className="we-consent-row read-only">
+                    <div
+                      key={i}
+                      className="we-consent-row read-only"
+                      title="Enrolment participation consent for WE4WE programme"
+                    >
                       <div
                         className={`we-checkbox-btn ${consentB[i] ? 'checked' : ''} read-only`}
-                        title="Enrolment participation consent"
+                        title="Enrolment participation consent for WE4WE programme"
                         aria-label={label}
                       >
                         {consentB[i] && (
@@ -370,7 +401,7 @@ export default function WE4WERegistration() {
                 <input
                   type="email"
                   className="we-input"
-                  placeholder={gateOpen ? "firstname.lastname@company.com" : "All consents must be accepted"}
+                  placeholder={gateOpen ? "firstname.lastname@company.com" : "Please check all 4 privacy consents above to enter email"}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={!gateOpen || codeSent || isSending}
