@@ -30,21 +30,23 @@ export default function WE4WERegistration() {
   const [employeeId, setEmployeeId] = useState('');
   const [email, setEmail] = useState('');
 
-  // Consent Ledgers: Section A starts unchecked (interactive), Section B starts checked (read-only)
-  const [consentA, setConsentA] = useState([false, false, false, false]);
+  // Privacy & Enrolment Consents
+  const [consentAgreed, setConsentAgreed] = useState(false);
   const [enrolYes, setEnrolYes] = useState(true);
-  const [consentB, setConsentB] = useState([true, true, true, true, true]);
+  const [enrolConsentAgreed, setEnrolConsentAgreed] = useState(true);
 
   // OTP Verification State
   const [isSending, setIsSending] = useState(false);
   const [codeSent, setCodeSent] = useState(false);
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
-  const [isVerifying, setIsVerifying] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [resendSecs, setResendSecs] = useState(0);
   const [expirySecs, setExpirySecs] = useState(600);
   const [serverOtp, setServerOtp] = useState(null);
 
-  // Status & Confirmation State
+  // Submission State
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isDone, setIsDone] = useState(false);
   const [createdRecordId, setCreatedRecordId] = useState('');
@@ -53,7 +55,8 @@ export default function WE4WERegistration() {
 
   const otpInputRefs = useRef([]);
   const privacyLedgerRef = useRef(null);
-  const checkboxRefs = useRef([]);
+  const consentCheckboxRef = useRef(null);
+  const verifyBlockRef = useRef(null);
 
   const getNowStamp = () => {
     return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -68,53 +71,37 @@ export default function WE4WERegistration() {
   // Timer countdown
   useEffect(() => {
     let interval;
-    if (codeSent && !isDone) {
+    if (codeSent && !isEmailVerified && !isDone) {
       interval = setInterval(() => {
         setResendSecs((prev) => Math.max(0, prev - 1));
         setExpirySecs((prev) => Math.max(0, prev - 1));
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [codeSent, isDone]);
+  }, [codeSent, isEmailVerified, isDone]);
 
   // Focus first OTP cell on send
   useEffect(() => {
-    if (codeSent && otpInputRefs.current[0]) {
+    if (codeSent && !isEmailVerified && otpInputRefs.current[0]) {
       setTimeout(() => {
         otpInputRefs.current[0]?.focus();
       }, 100);
     }
-  }, [codeSent]);
+  }, [codeSent, isEmailVerified]);
 
-  // Toggle individual Privacy Consent item (Section A)
-  const toggleConsentA = (index) => {
-    if (isDone) return;
-    const newA = [...consentA];
-    newA[index] = !newA[index];
-    setConsentA(newA);
-    setErrorMessage('');
-  };
-
-  const allAChecked = consentA.every(Boolean);
-  const allBChecked = !enrolYes || consentB.every(Boolean);
-  const gateOpen = allAChecked && allBChecked;
-
-  // Auto-scroll to the first unchecked privacy consent checkbox when clicking gated fields
+  // Auto-scroll to the privacy consent agreement checkbox
   const handleBlockedFieldClick = () => {
-    if (!gateOpen) {
-      const firstUncheckedIndex = consentA.findIndex((val) => !val);
-      if (firstUncheckedIndex !== -1 && checkboxRefs.current[firstUncheckedIndex]) {
-        const el = checkboxRefs.current[firstUncheckedIndex];
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        el.classList.remove('we-pulse-highlight');
-        // Force reflow for animation restart
-        void el.offsetWidth;
-        el.classList.add('we-pulse-highlight');
-        setTimeout(() => el.classList.remove('we-pulse-highlight'), 1600);
+    if (!consentAgreed) {
+      if (consentCheckboxRef.current) {
+        consentCheckboxRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        consentCheckboxRef.current.classList.remove('we-pulse-highlight');
+        void consentCheckboxRef.current.offsetWidth;
+        consentCheckboxRef.current.classList.add('we-pulse-highlight');
+        setTimeout(() => consentCheckboxRef.current?.classList.remove('we-pulse-highlight'), 1600);
       } else if (privacyLedgerRef.current) {
         privacyLedgerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
-      setErrorMessage('Please accept all privacy consent checkboxes above to unlock the fields.');
+      setErrorMessage('Please accept the privacy consent agreement below to proceed.');
     }
   };
 
@@ -156,11 +143,6 @@ export default function WE4WERegistration() {
 
   // 1. Send OTP via Deluge Function (only triggered once)
   const handleSendCode = async () => {
-    if (!gateOpen) {
-      handleBlockedFieldClick();
-      return;
-    }
-
     if (!name.trim()) {
       setErrorMessage('Please enter your Name.');
       return;
@@ -208,6 +190,7 @@ export default function WE4WERegistration() {
       }
 
       setCodeSent(true);
+      setIsEmailVerified(false);
       setResendSecs(30);
       setExpirySecs(600);
       setOtpDigits(['', '', '', '', '', '']);
@@ -219,8 +202,8 @@ export default function WE4WERegistration() {
     }
   };
 
-  // 2. Verify OTP & Create Record in Zoho CRM Health_Camp_Registrations Module
-  const handleVerifyAndSubmit = async () => {
+  // 2. Verify Email OTP locally/against server OTP (Does NOT create record in CRM yet)
+  const handleVerifyOtp = () => {
     const enteredOtp = otpDigits.join('');
     if (enteredOtp.length < 6) {
       setErrorMessage('Please enter all 6 digits of the OTP verification code.');
@@ -237,18 +220,68 @@ export default function WE4WERegistration() {
       return;
     }
 
-    setIsVerifying(true);
+    setIsVerifyingOtp(true);
+    setTimeout(() => {
+      setIsEmailVerified(true);
+      setIsVerifyingOtp(false);
+      setErrorMessage('');
+      console.log('✅ Email verified successfully!');
+    }, 400);
+  };
+
+  // 3. Final Submit Button at Bottom (Creates record in Zoho CRM backend)
+  const handleSubmit = async () => {
+    if (!name.trim()) {
+      setErrorMessage('Please enter your Name.');
+      if (verifyBlockRef.current) verifyBlockRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    if (!employeeId.trim()) {
+      setErrorMessage('Please enter your Employee ID.');
+      if (verifyBlockRef.current) verifyBlockRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !/^[a-zA-Z0-9._%+-]+@zohocorp\.com$/i.test(trimmedEmail)) {
+      setErrorMessage('Please enter a valid work email ending with @zohocorp.com.');
+      if (verifyBlockRef.current) verifyBlockRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    if (!isEmailVerified) {
+      if (!codeSent) {
+        setErrorMessage('Please click "Send code" and verify your email address before submitting.');
+      } else {
+        setErrorMessage('Please enter the 6-digit OTP and click "Verify code" to verify your email.');
+      }
+      if (verifyBlockRef.current) verifyBlockRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    if (!consentAgreed) {
+      handleBlockedFieldClick();
+      return;
+    }
+
+    if (enrolYes && !enrolConsentAgreed) {
+      setErrorMessage('Please accept the enrolment consent agreement before submitting.');
+      return;
+    }
+
+    setIsSubmitting(true);
     setErrorMessage('');
 
     try {
-      console.log('✅ OTP Verified! Creating record in Health_Camp_Registrations module...');
+      console.log('🚀 Submitting registration to Zoho CRM Health_Camp_Registrations module...');
       const registrationPayload = {
         name: name.trim(),
         employeeId: employeeId.trim(),
-        email: email.trim(),
+        email: trimmedEmail,
         enrolYes: enrolYes,
-        consentA: consentA,
-        consentB: consentB,
+        consentA: [consentAgreed, consentAgreed, consentAgreed, consentAgreed],
+        consentB: [enrolConsentAgreed, enrolConsentAgreed, enrolConsentAgreed, enrolConsentAgreed, enrolConsentAgreed],
       };
 
       const res = await createHealthCampRegistration(registrationPayload);
@@ -263,7 +296,7 @@ export default function WE4WERegistration() {
       console.error('Submission error:', err);
       setErrorMessage(err.message || 'Registration failed. Please try again.');
     } finally {
-      setIsVerifying(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -272,10 +305,11 @@ export default function WE4WERegistration() {
     setName('');
     setEmployeeId('');
     setEmail('');
-    setConsentA([false, false, false, false]);
+    setConsentAgreed(false);
     setEnrolYes(true);
-    setConsentB([true, true, true, true, true]);
+    setEnrolConsentAgreed(true);
     setCodeSent(false);
+    setIsEmailVerified(false);
     setOtpDigits(['', '', '', '', '', '']);
     setResendSecs(0);
     setExpirySecs(600);
@@ -314,7 +348,146 @@ export default function WE4WERegistration() {
           management — only anonymised aggregate reports may be used for wellness planning.
         </div>
 
-        {/* Privacy Consent Ledger (Section A) — Interactive, Unchecked on load */}
+        {/* Verification & Sign Block (At Top) */}
+        {!isDone && (
+          <div className="we-verify-block" ref={verifyBlockRef}>
+            <div className="we-enrol-title">Sign with email verification</div>
+
+            {/* Name & Employee ID Inputs */}
+            <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginTop: '10px', maxWidth: '640px' }}>
+              <div style={{ flex: '1 1 200px', maxWidth: '300px' }}>
+                <div style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--ink-700)', marginBottom: '6px' }}>
+                  Name <span className="we-req">*</span>
+                </div>
+                <input
+                  type="text"
+                  className="we-input"
+                  placeholder="e.g. Emily Davis"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  disabled={isEmailVerified || isSending}
+                />
+              </div>
+
+              <div style={{ flex: '1 1 200px', maxWidth: '300px' }}>
+                <div style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--ink-700)', marginBottom: '6px' }}>
+                  Employee ID <span className="we-req">*</span>
+                </div>
+                <input
+                  type="text"
+                  className="we-input"
+                  placeholder="e.g. 0269"
+                  value={employeeId}
+                  onChange={(e) => setEmployeeId(e.target.value)}
+                  disabled={isEmailVerified || isSending}
+                />
+              </div>
+            </div>
+
+            {/* Work Email & Send Button */}
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap', marginTop: '12px', maxWidth: '640px' }}>
+              <div style={{ flex: '1 1 240px', maxWidth: '360px' }}>
+                <div style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--ink-700)', marginBottom: '6px' }}>
+                  Work email address <span className="we-req">*</span>
+                </div>
+                <input
+                  type="email"
+                  className="we-input"
+                  placeholder="firstname.lastname@zohocorp.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={isEmailVerified || isSending}
+                />
+              </div>
+              {!isEmailVerified && (
+                <button
+                  type="button"
+                  onClick={handleSendCode}
+                  disabled={codeSent || isSending}
+                  className="we-btn we-btn-primary"
+                >
+                  {isSending ? (
+                    <>
+                      <span className="we-spinner" /> Sending OTP...
+                    </>
+                  ) : codeSent ? (
+                    'Code sent ✓'
+                  ) : (
+                    'Send code'
+                  )}
+                </button>
+              )}
+              {isEmailVerified && (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', height: '38px', color: 'var(--status-done)', fontWeight: 500, fontSize: '13px' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 13l4 4L19 7" />
+                  </svg>
+                  Email verified
+                </div>
+              )}
+            </div>
+
+            {/* OTP Input Row */}
+            {codeSent && !isEmailVerified && (
+              <div style={{ marginTop: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '16px', flexWrap: 'wrap' }}>
+                  <div style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--ink-700)' }}>Enter the 6-digit code</div>
+                  <div style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--ink-500)', fontVariantNumeric: 'tabular-nums' }}>
+                    {expirySecs > 0 ? `Expires in ${formatMMSS(expirySecs)}` : 'Code expired'}
+                  </div>
+                </div>
+
+                <div className="we-otp-row" onPaste={handlePaste}>
+                  {otpDigits.map((digit, i) => (
+                    <input
+                      key={i}
+                      ref={(el) => (otpInputRefs.current[i] = el)}
+                      inputMode="numeric"
+                      maxLength={1}
+                      className={`we-otp-cell ${digit ? 'has-val' : ''}`}
+                      value={digit}
+                      onChange={(e) => handleDigitChange(i, e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(i, e)}
+                    />
+                  ))}
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '18px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={handleVerifyOtp}
+                    disabled={isVerifyingOtp}
+                    className="we-btn we-btn-primary"
+                  >
+                    {isVerifyingOtp ? (
+                      <>
+                        <span className="we-spinner" /> Verifying...
+                      </>
+                    ) : (
+                      'Verify code'
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSendCode}
+                    disabled={resendSecs > 0 || isSending}
+                    className="we-btn we-btn-ghost"
+                  >
+                    {resendSecs > 0 ? `Resend in ${resendSecs}s` : 'Resend code'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Error Message */}
+            {errorMessage && <div className="we-error-banner">{errorMessage}</div>}
+          </div>
+        )}
+
+        {!isDone && <div className="we-divider" />}
+
+        {/* Privacy Consent Ledger (Section A) — Bullet points with single agreement checkbox */}
         {!isDone && (
           <div ref={privacyLedgerRef}>
             <div className="we-ledger-header">
@@ -323,26 +496,45 @@ export default function WE4WERegistration() {
               </div>
             </div>
 
-            {LABELS_A.map((label, i) => (
-              <div key={i} className="we-consent-row">
-                <button
-                  type="button"
-                  ref={(el) => (checkboxRefs.current[i] = el)}
-                  onClick={() => toggleConsentA(i)}
-                  className={`we-checkbox-btn ${consentA[i] ? 'checked' : ''}`}
-                  aria-label={label}
-                >
-                  {consentA[i] && (
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </button>
-                <div className="we-consent-label" onClick={() => toggleConsentA(i)}>
-                  {label}
+            {/* Bulleted Points */}
+            <div className="we-bullet-list">
+              {LABELS_A.map((label, i) => (
+                <div key={i} className="we-bullet-item">
+                  <span className="we-bullet-dot" />
+                  <div>{label}</div>
                 </div>
+              ))}
+            </div>
+
+            {/* Agreement Checkbox */}
+            <div className="we-consent-row" style={{ border: 'none', padding: '6px 0 0 0' }}>
+              <button
+                type="button"
+                ref={consentCheckboxRef}
+                onClick={() => {
+                  setConsentAgreed(!consentAgreed);
+                  setErrorMessage('');
+                }}
+                className={`we-checkbox-btn ${consentAgreed ? 'checked' : ''}`}
+                aria-label="I have read and agree to all the privacy and consent terms above."
+              >
+                {consentAgreed && (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </button>
+              <div
+                className="we-consent-label"
+                onClick={() => {
+                  setConsentAgreed(!consentAgreed);
+                  setErrorMessage('');
+                }}
+                style={{ fontWeight: 500, color: '#000000' }}
+              >
+                I have read and agree to all the privacy and consent terms above.
               </div>
-            ))}
+            </div>
           </div>
         )}
 
@@ -361,7 +553,7 @@ export default function WE4WERegistration() {
                 type="button"
                 onClick={() => {
                   setEnrolYes(true);
-                  setConsentB([true, true, true, true, true]);
+                  setEnrolConsentAgreed(true);
                   setErrorMessage('');
                 }}
                 className={`we-btn ${enrolYes ? 'we-btn-primary' : 'we-btn-secondary'}`}
@@ -372,7 +564,7 @@ export default function WE4WERegistration() {
                 type="button"
                 onClick={() => {
                   setEnrolYes(false);
-                  setConsentB([false, false, false, false, false]);
+                  setEnrolConsentAgreed(false);
                   setErrorMessage('');
                 }}
                 className={`we-btn ${!enrolYes ? 'we-btn-primary' : 'we-btn-secondary'}`}
@@ -402,202 +594,66 @@ export default function WE4WERegistration() {
                     </div>
                   </div>
 
-                  {LABELS_B.map((label, i) => (
-                    <div
-                      key={i}
-                      className="we-consent-row read-only"
-                      title="Enrolment participation consent for WE4WE programme"
+                  {/* Bulleted Points for Enrolment */}
+                  <div className="we-bullet-list">
+                    {LABELS_B.map((label, i) => (
+                      <div key={i} className="we-bullet-item">
+                        <span className="we-bullet-dot" />
+                        <div>{label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Single Agreement Checkbox for Enrolment */}
+                  <div className="we-consent-row" style={{ border: 'none', padding: '6px 0 0 0' }}>
+                    <button
+                      type="button"
+                      onClick={() => setEnrolConsentAgreed(!enrolConsentAgreed)}
+                      className={`we-checkbox-btn ${enrolConsentAgreed ? 'checked' : ''}`}
+                      aria-label="I have read and agree to all the enrolment consent terms above."
                     >
-                      <div
-                        className={`we-checkbox-btn ${consentB[i] ? 'checked' : ''} read-only`}
-                        title="Enrolment participation consent for WE4WE programme"
-                        aria-label={label}
-                      >
-                        {consentB[i] && (
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                      </div>
-                      <div className="we-consent-label">
-                        {label}
-                      </div>
+                      {enrolConsentAgreed && (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                    <div
+                      className="we-consent-label"
+                      onClick={() => setEnrolConsentAgreed(!enrolConsentAgreed)}
+                      style={{ fontWeight: 500, color: '#000000' }}
+                    >
+                      I have read and agree to all the enrolment consent terms above.
                     </div>
-                  ))}
+                  </div>
                 </div>
               </div>
             )}
-          </div>
-        )}
 
-        {!isDone && <div className="we-divider" />}
-
-        {/* Verification & Sign Block */}
-        {!isDone && (
-          <div className="we-verify-block">
-            <div className="we-enrol-title">Sign with email verification</div>
-
-            {/* Name & Employee ID Inputs */}
-            <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginTop: '10px', maxWidth: '640px' }}>
-              <div style={{ flex: '1 1 200px', maxWidth: '300px' }} onClick={!gateOpen ? handleBlockedFieldClick : undefined}>
-                <div style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--ink-700)', marginBottom: '6px' }}>
-                  Name <span className="we-req">*</span>
-                </div>
-                <input
-                  type="text"
-                  className="we-input"
-                  placeholder="e.g. Emily Davis"
-                  value={name}
-                  onChange={gateOpen ? (e) => setName(e.target.value) : undefined}
-                  onClick={!gateOpen ? handleBlockedFieldClick : undefined}
-                  onFocus={!gateOpen ? (e) => { e.target.blur(); handleBlockedFieldClick(); } : undefined}
-                  readOnly={!gateOpen || codeSent || isSending}
-                  style={!gateOpen ? { cursor: 'pointer' } : {}}
-                />
-              </div>
-
-              <div style={{ flex: '1 1 200px', maxWidth: '300px' }} onClick={!gateOpen ? handleBlockedFieldClick : undefined}>
-                <div style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--ink-700)', marginBottom: '6px' }}>
-                  Employee ID <span className="we-req">*</span>
-                </div>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  className="we-input"
-                  placeholder="e.g. 0269"
-                  value={employeeId}
-                  onChange={gateOpen ? (e) => setEmployeeId(e.target.value.replace(/\D/g, '')) : undefined}
-                  onClick={!gateOpen ? handleBlockedFieldClick : undefined}
-                  onFocus={!gateOpen ? (e) => { e.target.blur(); handleBlockedFieldClick(); } : undefined}
-                  readOnly={!gateOpen || codeSent || isSending}
-                  style={!gateOpen ? { cursor: 'pointer' } : {}}
-                />
-              </div>
-            </div>
-
-            {/* Work Email & Send Button */}
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', flexWrap: 'wrap', marginTop: '12px', maxWidth: '640px' }}>
-              <div style={{ flex: '1 1 240px', maxWidth: '360px' }} onClick={!gateOpen ? handleBlockedFieldClick : undefined}>
-                <div style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--ink-700)', marginBottom: '6px' }}>
-                  Work email address <span className="we-req">*</span>
-                </div>
-                <input
-                  type="email"
-                  className="we-input"
-                  placeholder="firstname.lastname@zohocorp.com"
-                  value={email}
-                  onChange={gateOpen ? (e) => setEmail(e.target.value) : undefined}
-                  onClick={!gateOpen ? handleBlockedFieldClick : undefined}
-                  onFocus={!gateOpen ? (e) => { e.target.blur(); handleBlockedFieldClick(); } : undefined}
-                  readOnly={!gateOpen || codeSent || isSending}
-                  style={!gateOpen ? { cursor: 'pointer' } : {}}
-                />
-
-                {/* Live Email Preview */}
-                {email && !codeSent && (
-                  <div
-                    onClick={() => {
-                      if (gateOpen && !codeSent && !isSending) {
-                        const prefix = email.split('@')[0];
-                        if (prefix) setEmail(`${prefix}@zohocorp.com`);
-                      }
-                    }}
-                    style={{
-                      marginTop: '6px',
-                      fontSize: '12px',
-                      color: 'var(--brand-600)',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      wordBreak: 'break-all',
-                    }}
-                    title="Click to apply"
-                  >
-                    <span>
-                      {email.includes('@')
-                        ? email.toLowerCase().endsWith('@zohocorp.com')
-                          ? email
-                          : `${email.split('@')[0]}@zohocorp.com`
-                        : `${email}@zohocorp.com`}
-                    </span>
-                  </div>
-                )}
-              </div>
+            {/* Bottom Action Bar: Cancel & Submit Buttons */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', marginTop: '32px' }}>
               <button
                 type="button"
-                onClick={handleSendCode}
-                disabled={codeSent || isSending}
-                className="we-btn we-btn-primary"
-                style={{ marginTop: '22px' }}
+                onClick={handleReset}
+                className="we-btn we-btn-secondary"
               >
-                {isSending ? (
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className="we-btn we-btn-primary"
+              >
+                {isSubmitting ? (
                   <>
-                    <span className="we-spinner" /> Sending OTP...
+                    <span className="we-spinner" /> Submitting...
                   </>
-                ) : codeSent ? (
-                  'Code sent ✓'
                 ) : (
-                  'Send code'
+                  'Submit'
                 )}
               </button>
             </div>
-
-            {/* OTP Input Row */}
-            {codeSent && (
-              <div style={{ marginTop: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '16px', flexWrap: 'wrap' }}>
-                  <div style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--ink-700)' }}>Enter the 6-digit code</div>
-                  <div style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--ink-500)', fontVariantNumeric: 'tabular-nums' }}>
-                    {expirySecs > 0 ? `Expires in ${formatMMSS(expirySecs)}` : 'Code expired'}
-                  </div>
-                </div>
-
-                <div className="we-otp-row" onPaste={handlePaste}>
-                  {otpDigits.map((digit, i) => (
-                    <input
-                      key={i}
-                      ref={(el) => (otpInputRefs.current[i] = el)}
-                      inputMode="numeric"
-                      maxLength={1}
-                      className={`we-otp-cell ${digit ? 'has-val' : ''}`}
-                      value={digit}
-                      onChange={(e) => handleDigitChange(i, e.target.value)}
-                      onKeyDown={(e) => handleKeyDown(i, e)}
-                    />
-                  ))}
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '18px', flexWrap: 'wrap' }}>
-                  <button
-                    type="button"
-                    onClick={handleVerifyAndSubmit}
-                    disabled={isVerifying}
-                    className="we-btn we-btn-primary"
-                  >
-                    {isVerifying ? (
-                      <>
-                        <span className="we-spinner" /> Verifying &amp; Registering...
-                      </>
-                    ) : (
-                      'Verify & submit registration'
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleSendCode}
-                    disabled={resendSecs > 0 || isSending}
-                    className="we-btn we-btn-ghost"
-                  >
-                    {resendSecs > 0 ? `Resend in ${resendSecs}s` : 'Resend code'}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Error Message */}
-            {errorMessage && <div className="we-error-banner">{errorMessage}</div>}
           </div>
         )}
 

@@ -308,6 +308,35 @@ body {
   border-bottom: 1px solid var(--line-100);
 }
 
+.we-bullet-list {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.we-bullet-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #000000;
+}
+
+.we-bullet-dot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  background: var(--ink-700);
+  margin-top: 7px;
+}
+
 .we-checkbox-btn {
   width: 20px;
   height: 20px;
