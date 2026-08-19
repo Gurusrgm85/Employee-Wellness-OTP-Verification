@@ -166,41 +166,40 @@ router.post(['/zoho/execute-function', '/api/zoho/execute-function'], async (req
   }
 });
 
-// 4. Create Patient Record in Zoho CRM
-router.post(['/zoho/create-patient', '/api/zoho/create-patient'], async (req, res) => {
+// 4. Create Health Camp Registration Record in Zoho CRM
+router.post(['/zoho/create-registration', '/zoho/create-patient', '/api/zoho/create-patient'], async (req, res) => {
   const { formData } = req.body;
 
   if (!formData) {
     return res.status(400).json({ error: 'Missing formData payload' });
   }
 
-  let cleanMobile = (formData.mobileNo || '').replace(/\D/g, '');
-  if (cleanMobile.length > 10) {
-    if (cleanMobile.startsWith('91') && cleanMobile.length === 12) {
-      cleanMobile = cleanMobile.slice(2);
-    } else {
-      cleanMobile = cleanMobile.slice(-10);
-    }
-  }
-
-  const patientRecord = {
-    First_Name: formData.firstName || '',
-    Date_of_Birth: formData.dob || null,
-    Gender: formData.gender || '',
+  const registrationRecord = {
+    Name1: formData.name || formData.firstName || '',
+    Employee_ID: formData.employeeId || '',
     Email: formData.email || '',
-    Postal_Code: formData.postalCode || '',
-    Address_Line_1: formData.address || '',
-    Mobile_No: cleanMobile,
+    WE4WE_programme_enrolment: Boolean(formData.enrolYes ?? true),
+    I_have_read_the_privacy_notice: Boolean(formData.consentA?.[0] ?? true),
+    I_understand_participation_is_voluntary: Boolean(formData.consentA?.[1] ?? true),
+    I_consent_to_collection_and_processing_of_my_healt: Boolean(formData.consentA?.[2] ?? true),
+    I_understand_I_may_withdraw_my_consent_from_the_WE: Boolean(formData.consentA?.[3] ?? true),
   };
 
-  const payload = { data: [patientRecord] };
+  if (formData.enrolYes) {
+    registrationRecord.I_understand_the_programme_duration_is_approximate = Boolean(formData.consentB?.[1] ?? true);
+    registrationRecord.I_understand_I_may_withdraw_at_any_time = Boolean(formData.consentB?.[2] ?? true);
+    registrationRecord.I_consent_to_receive_reminders_by_SMS_email_or_pho = Boolean(formData.consentB?.[3] ?? true);
+    registrationRecord.I_understand_participation_does_not_guarantee_any = Boolean(formData.consentB?.[4] ?? true);
+  }
+
+  const payload = { data: [registrationRecord] };
 
   try {
     const createCall = async (token) => {
       const config = getZohoConfig();
-      const url = `${config.apiDomain}/crm/v2/Patient`;
+      const url = `${config.apiDomain}/crm/v7/Health_Camp_Registrations`;
 
-      console.log('📤 [Function] Creating Patient Record:', payload);
+      console.log('📤 [Function] Creating Health Camp Registration Record:', JSON.stringify(payload));
 
       const response = await fetch(url, {
         method: 'POST',
@@ -230,7 +229,7 @@ router.post(['/zoho/create-patient', '/api/zoho/create-patient'], async (req, re
 
     res.json(result.data);
   } catch (err) {
-    console.error('Error creating patient record:', err);
+    console.error('Error creating registration record:', err);
     res.status(500).json({ error: err.message || 'Record creation failed' });
   }
 });

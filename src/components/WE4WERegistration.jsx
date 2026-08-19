@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { executeDelugeFunction, createPatientRecord } from '../services/zohoService';
+import { executeDelugeFunction, createHealthCampRegistration } from '../services/zohoService';
+import zfhLogo from '../assets/zfh-logo.png';
 
 const LABELS_A = [
   'I have read the privacy notice.',
@@ -25,6 +26,8 @@ const PROGRAMME_FEATURES = [
 ];
 
 export default function WE4WERegistration() {
+  const [name, setName] = useState('');
+  const [employeeId, setEmployeeId] = useState('');
   const [email, setEmail] = useState('');
 
   // Consent Ledgers: Section A starts unchecked (interactive), Section B starts checked (read-only)
@@ -137,8 +140,19 @@ export default function WE4WERegistration() {
       return;
     }
 
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setErrorMessage('Please enter a valid work email address.');
+    if (!name.trim()) {
+      setErrorMessage('Please enter your Name.');
+      return;
+    }
+
+    if (!employeeId.trim()) {
+      setErrorMessage('Please enter your Employee ID.');
+      return;
+    }
+
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !/^[a-zA-Z0-9._%+-]+@zohocorp\.com$/i.test(trimmedEmail)) {
+      setErrorMessage('Please enter a valid work email ending with @zohocorp.com.');
       return;
     }
 
@@ -148,10 +162,10 @@ export default function WE4WERegistration() {
     try {
       console.log('⚡ Requesting OTP via Deluge Function "otp1"...');
       const delugeRes = await executeDelugeFunction('otp1', {
-        email: email,
+        email: email.trim(),
         phone: '9876543210',
-        name: email.split('@')[0] || 'Employee',
-        first_name: email.split('@')[0] || 'Employee',
+        name: name.trim() || 'Employee',
+        first_name: name.trim() || 'Employee',
         action: 'send_otp',
       });
 
@@ -184,7 +198,7 @@ export default function WE4WERegistration() {
     }
   };
 
-  // 2. Verify OTP & Create Record in Zoho CRM
+  // 2. Verify OTP & Create Record in Zoho CRM Health_Camp_Registrations Module
   const handleVerifyAndSubmit = async () => {
     const enteredOtp = otpDigits.join('');
     if (enteredOtp.length < 6) {
@@ -206,19 +220,17 @@ export default function WE4WERegistration() {
     setErrorMessage('');
 
     try {
-      // Create Record in Zoho CRM Patient Module
-      console.log('✅ OTP Verified! Creating patient record in Zoho CRM...');
-      const patientPayload = {
-        firstName: email.split('@')[0] || 'Employee',
-        dob: '1995-08-15',
-        gender: 'Female',
-        email: email,
-        mobileNo: '9876543210',
-        postalCode: '600028',
-        address: 'WE4WE Workplace Health Facility',
+      console.log('✅ OTP Verified! Creating record in Health_Camp_Registrations module...');
+      const registrationPayload = {
+        name: name.trim(),
+        employeeId: employeeId.trim(),
+        email: email.trim(),
+        enrolYes: enrolYes,
+        consentA: consentA,
+        consentB: consentB,
       };
 
-      const res = await createPatientRecord(patientPayload);
+      const res = await createHealthCampRegistration(registrationPayload);
       const recordId = res?.data?.[0]?.details?.id || 'CRM-' + Math.floor(100000 + Math.random() * 900000);
 
       const generatedRef = 'WE4WE-' + Math.floor(100000 + Math.random() * 899999);
@@ -236,6 +248,8 @@ export default function WE4WERegistration() {
 
   // Reset form
   const handleReset = () => {
+    setName('');
+    setEmployeeId('');
     setEmail('');
     setConsentA([false, false, false, false]);
     setEnrolYes(true);
@@ -255,11 +269,20 @@ export default function WE4WERegistration() {
     <div className="we-page-wrapper">
       <div className="we-sheet">
         {/* Header Block */}
-        <div>
-          <h1 className="we-header-title">Health Camp Registrations and Privacy Consents</h1>
-          <div className="we-header-desc">
-            Welcome to WE4WE (Wellness Engineered for Workplace Excellence). Participation is voluntary. Purpose:
-            registration for blood screening and/or enrolment into the WE4WE wellness programme.
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '20px', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: '280px' }}>
+            <h1 className="we-header-title">Health Camp Registrations and Privacy Consents</h1>
+            <div className="we-header-desc">
+              Welcome to WE4WE (Wellness Engineered for Workplace Excellence). Participation is voluntary. Purpose:
+              registration for blood screening and/or enrolment into the WE4WE wellness programme.
+            </div>
+          </div>
+          <div style={{ flexShrink: 0, paddingTop: '4px' }}>
+            <img
+              src={zfhLogo}
+              alt="Powered by ZFH"
+              style={{ height: '42px', width: 'auto', objectFit: 'contain', display: 'block' }}
+            />
           </div>
         </div>
 
@@ -392,15 +415,49 @@ export default function WE4WERegistration() {
           <div className="we-verify-block">
             <div className="we-enrol-title">Sign with email verification</div>
 
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap', marginTop: '6px' }}>
-              <div style={{ flex: 1, minWidth: '240px' }}>
+            {/* Name & Employee ID Inputs */}
+            <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginTop: '10px', maxWidth: '640px' }}>
+              <div style={{ flex: '1 1 200px', maxWidth: '300px' }}>
+                <div style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--ink-700)', marginBottom: '6px' }}>
+                  Name <span className="we-req">*</span>
+                </div>
+                <input
+                  type="text"
+                  className="we-input"
+                  placeholder="e.g. Emily Davis"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  disabled={!gateOpen || codeSent || isSending}
+                  readOnly={!gateOpen}
+                />
+              </div>
+
+              <div style={{ flex: '1 1 200px', maxWidth: '300px' }}>
+                <div style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--ink-700)', marginBottom: '6px' }}>
+                  Employee ID <span className="we-req">*</span>
+                </div>
+                <input
+                  type="text"
+                  className="we-input"
+                  placeholder="e.g. EMP-1049"
+                  value={employeeId}
+                  onChange={(e) => setEmployeeId(e.target.value)}
+                  disabled={!gateOpen || codeSent || isSending}
+                  readOnly={!gateOpen}
+                />
+              </div>
+            </div>
+
+            {/* Work Email & Send Button */}
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap', marginTop: '12px', maxWidth: '640px' }}>
+              <div style={{ flex: '1 1 240px', maxWidth: '360px' }}>
                 <div style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--ink-700)', marginBottom: '6px' }}>
                   Work email address <span className="we-req">*</span>
                 </div>
                 <input
                   type="email"
                   className="we-input"
-                  placeholder={gateOpen ? "firstname.lastname@company.com" : "Please check all 4 privacy consents above to enter email"}
+                  placeholder="firstname.lastname@zohocorp.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={!gateOpen || codeSent || isSending}
@@ -410,7 +467,7 @@ export default function WE4WERegistration() {
               <button
                 type="button"
                 onClick={handleSendCode}
-                disabled={!gateOpen || codeSent || isSending || !email}
+                disabled={!gateOpen || codeSent || isSending || !email || !name || !employeeId}
                 className="we-btn we-btn-primary"
               >
                 {isSending ? (
@@ -454,7 +511,7 @@ export default function WE4WERegistration() {
                   <button
                     type="button"
                     onClick={handleVerifyAndSubmit}
-                    disabled={otpDigits.join('').length < 6 || isVerifying}
+                    disabled={isVerifying}
                     className="we-btn we-btn-primary"
                   >
                     {isVerifying ? (

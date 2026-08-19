@@ -219,57 +219,51 @@ export async function executeDelugeFunction(functionName = 'otp1', argsObj = {},
 }
 
 /**
- * Creates a record in the 'Patient' module in Zoho CRM with 401 Auto-Retry
+ * Creates a record in the 'Health_Camp_Registrations' module in Zoho CRM with 401 Auto-Retry
  */
-export async function createPatientRecord(formData, isRetry = false) {
-  const isoDate = normalizeDateToISO(formData.dob);
-
-  // Clean mobile number: remove +91, spaces, special chars and keep exact 10 digits
-  let cleanMobile = (formData.mobileNo || '').replace(/\D/g, '');
-  if (cleanMobile.length > 10) {
-    if (cleanMobile.startsWith('91') && cleanMobile.length === 12) {
-      cleanMobile = cleanMobile.slice(2);
-    } else {
-      cleanMobile = cleanMobile.slice(-10);
-    }
-  }
-
-  const patientRecord = {
-    First_Name: formData.firstName || '',
-    Date_of_Birth: isoDate || null,
-    Gender: formData.gender || '',
+export async function createHealthCampRegistration(formData, isRetry = false) {
+  const registrationRecord = {
+    Name1: formData.name || formData.firstName || '',
+    Employee_ID: formData.employeeId || '',
     Email: formData.email || '',
-    Postal_Code: formData.postalCode || '',
-    Address_Line_1: formData.address || '',
-    Mobile_No: cleanMobile,
+    WE4WE_programme_enrolment: Boolean(formData.enrolYes ?? true),
+    I_have_read_the_privacy_notice: Boolean(formData.consentA?.[0] ?? true),
+    I_understand_participation_is_voluntary: Boolean(formData.consentA?.[1] ?? true),
+    I_consent_to_collection_and_processing_of_my_healt: Boolean(formData.consentA?.[2] ?? true),
+    I_understand_I_may_withdraw_my_consent_from_the_WE: Boolean(formData.consentA?.[3] ?? true),
   };
+
+  if (formData.enrolYes) {
+    registrationRecord.I_understand_the_programme_duration_is_approximate = Boolean(formData.consentB?.[1] ?? true);
+    registrationRecord.I_understand_I_may_withdraw_at_any_time = Boolean(formData.consentB?.[2] ?? true);
+    registrationRecord.I_consent_to_receive_reminders_by_SMS_email_or_pho = Boolean(formData.consentB?.[3] ?? true);
+    registrationRecord.I_understand_participation_does_not_guarantee_any = Boolean(formData.consentB?.[4] ?? true);
+  }
 
   // 1. Check if ZRC / Zoho Embedded App SDK is active
   if (typeof window !== 'undefined' && window.ZOHO && window.ZOHO.CRM && window.ZOHO.CRM.API) {
     try {
       console.log('🚀 Using ZRC (Zoho CRM JS SDK) insertRecord method...');
-      const zrcResult = await window.ZOHO.CRM.API.insertRecord({
-        Entity: 'Patient',
-        APIData: patientRecord,
+      const sdkResult = await window.ZOHO.CRM.API.insertRecord({
+        Entity: 'Health_Camp_Registrations',
+        APIData: registrationRecord,
         Trigger: ['workflow'],
       });
-
-      if (zrcResult && zrcResult.data && zrcResult.data[0]?.code === 'SUCCESS') {
-        console.log('✅ ZRC Record created successfully:', zrcResult);
-        return zrcResult;
+      console.log('📥 ZRC insertRecord response:', sdkResult);
+      if (sdkResult && sdkResult.data && sdkResult.data[0] && sdkResult.data[0].code === 'SUCCESS') {
+        return sdkResult;
       }
-    } catch (zrcErr) {
-      console.warn('ZRC SDK insertRecord failed, falling back to REST API:', zrcErr);
+    } catch (sdkErr) {
+      console.warn('ZRC insertRecord failed, falling back to Catalyst/REST:', sdkErr);
     }
   }
 
-  // 2. If Catalyst Backend function is configured, use it for secure record creation & auto-refresh
+  // 2. Catalyst Backend Function
   if (CONFIG.backendUrl) {
     try {
-      const backendEndpoint = `${CONFIG.backendUrl.replace(/\/$/, '')}/zoho/create-patient`;
-      console.log(`📤 [Catalyst Function] Creating Patient Record via backend:`, backendEndpoint);
+      const backendEndpoint = `${CONFIG.backendUrl.replace(/\/$/, '')}/zoho/create-registration`;
+      console.log(`📤 [Catalyst Function] Creating Health Camp Registration via backend:`, backendEndpoint);
 
-      // text/plain avoids the CORS preflight the Catalyst gateway can't answer
       const res = await fetch(backendEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
@@ -278,28 +272,28 @@ export async function createPatientRecord(formData, isRetry = false) {
 
       const result = await res.json();
       if (!res.ok) {
-        throw new Error(result.error || result.message || `Backend patient creation failed with status ${res.status}`);
+        throw new Error(result.error || result.message || `Backend registration creation failed with status ${res.status}`);
       }
       return result;
     } catch (backendErr) {
-      console.warn('Catalyst backend patient creation failed, falling back to direct REST API:', backendErr);
+      console.warn('Catalyst backend registration creation failed, falling back to direct REST API:', backendErr);
       if (!import.meta.env.DEV) {
         throw backendErr;
       }
     }
   }
 
-  // 3. REST API Method via configured proxy
+  // 3. Direct REST API via configured proxy
   const accessToken = await getValidAccessToken(isRetry);
   const payload = {
-    data: [patientRecord],
+    data: [registrationRecord],
   };
 
   const endpoint = import.meta.env.DEV
-    ? '/zoho-api/crm/v2/Patient'
-    : `${CONFIG.apiDomain.replace(/\/$/, '')}/crm/v2/Patient`;
+    ? '/zoho-api/crm/v7/Health_Camp_Registrations'
+    : `${CONFIG.apiDomain.replace(/\/$/, '')}/crm/v7/Health_Camp_Registrations`;
 
-  console.log('📤 Submitting Patient via REST API:', JSON.stringify(payload, null, 2));
+  console.log('📤 Submitting Health Camp Registration via REST API:', JSON.stringify(payload, null, 2));
 
   let response = await fetch(endpoint, {
     method: 'POST',
@@ -317,7 +311,7 @@ export async function createPatientRecord(formData, isRetry = false) {
   if ((response.status === 401 || result.code === 'INVALID_TOKEN') && !isRetry) {
     console.log('🔄 Token expired during record creation. Retrying with fresh token...');
     await refreshAccessToken();
-    return await createPatientRecord(formData, true);
+    return await createHealthCampRegistration(formData, true);
   }
 
   if (!response.ok) {
@@ -335,3 +329,6 @@ export async function createPatientRecord(formData, isRetry = false) {
 
   return result;
 }
+
+// Alias for backwards compatibility
+export const createPatientRecord = createHealthCampRegistration;
