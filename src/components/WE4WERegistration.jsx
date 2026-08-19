@@ -52,6 +52,8 @@ export default function WE4WERegistration() {
   const [signedAt, setSignedAt] = useState('');
 
   const otpInputRefs = useRef([]);
+  const privacyLedgerRef = useRef(null);
+  const checkboxRefs = useRef([]);
 
   const getNowStamp = () => {
     return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -97,6 +99,25 @@ export default function WE4WERegistration() {
   const allBChecked = !enrolYes || consentB.every(Boolean);
   const gateOpen = allAChecked && allBChecked;
 
+  // Auto-scroll to the first unchecked privacy consent checkbox when clicking gated fields
+  const handleBlockedFieldClick = () => {
+    if (!gateOpen) {
+      const firstUncheckedIndex = consentA.findIndex((val) => !val);
+      if (firstUncheckedIndex !== -1 && checkboxRefs.current[firstUncheckedIndex]) {
+        const el = checkboxRefs.current[firstUncheckedIndex];
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.remove('we-pulse-highlight');
+        // Force reflow for animation restart
+        void el.offsetWidth;
+        el.classList.add('we-pulse-highlight');
+        setTimeout(() => el.classList.remove('we-pulse-highlight'), 1600);
+      } else if (privacyLedgerRef.current) {
+        privacyLedgerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      setErrorMessage('Please accept all privacy consent checkboxes above to unlock the fields.');
+    }
+  };
+
   // Handle OTP digit entry
   const handleDigitChange = (index, value) => {
     const digit = String(value).replace(/\D/g, '').slice(-1);
@@ -136,7 +157,7 @@ export default function WE4WERegistration() {
   // 1. Send OTP via Deluge Function (only triggered once)
   const handleSendCode = async () => {
     if (!gateOpen) {
-      setErrorMessage('Please ensure all 4 privacy consent checkboxes are checked.');
+      handleBlockedFieldClick();
       return;
     }
 
@@ -162,7 +183,7 @@ export default function WE4WERegistration() {
     try {
       console.log('⚡ Requesting OTP via Deluge Function "otp1"...');
       const delugeRes = await executeDelugeFunction('otp1', {
-        email: email.trim(),
+        email: trimmedEmail,
         phone: '9876543210',
         name: name.trim() || 'Employee',
         first_name: name.trim() || 'Employee',
@@ -295,7 +316,7 @@ export default function WE4WERegistration() {
 
         {/* Privacy Consent Ledger (Section A) — Interactive, Unchecked on load */}
         {!isDone && (
-          <div>
+          <div ref={privacyLedgerRef}>
             <div className="we-ledger-header">
               <div className="we-section-label" style={{ margin: 0 }}>
                 Privacy consent ledger
@@ -306,6 +327,7 @@ export default function WE4WERegistration() {
               <div key={i} className="we-consent-row">
                 <button
                   type="button"
+                  ref={(el) => (checkboxRefs.current[i] = el)}
                   onClick={() => toggleConsentA(i)}
                   className={`we-checkbox-btn ${consentA[i] ? 'checked' : ''}`}
                   aria-label={label}
@@ -344,7 +366,7 @@ export default function WE4WERegistration() {
                 }}
                 className={`we-btn ${enrolYes ? 'we-btn-primary' : 'we-btn-secondary'}`}
               >
-                Yes, enrol me
+                Yes, enroll me
               </button>
               <button
                 type="button"
@@ -417,7 +439,7 @@ export default function WE4WERegistration() {
 
             {/* Name & Employee ID Inputs */}
             <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginTop: '10px', maxWidth: '640px' }}>
-              <div style={{ flex: '1 1 200px', maxWidth: '300px' }}>
+              <div style={{ flex: '1 1 200px', maxWidth: '300px' }} onClick={!gateOpen ? handleBlockedFieldClick : undefined}>
                 <div style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--ink-700)', marginBottom: '6px' }}>
                   Name <span className="we-req">*</span>
                 </div>
@@ -426,13 +448,15 @@ export default function WE4WERegistration() {
                   className="we-input"
                   placeholder="e.g. Emily Davis"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  disabled={!gateOpen || codeSent || isSending}
-                  readOnly={!gateOpen}
+                  onChange={gateOpen ? (e) => setName(e.target.value) : undefined}
+                  onClick={!gateOpen ? handleBlockedFieldClick : undefined}
+                  onFocus={!gateOpen ? (e) => { e.target.blur(); handleBlockedFieldClick(); } : undefined}
+                  readOnly={!gateOpen || codeSent || isSending}
+                  style={!gateOpen ? { cursor: 'pointer' } : {}}
                 />
               </div>
 
-              <div style={{ flex: '1 1 200px', maxWidth: '300px' }}>
+              <div style={{ flex: '1 1 200px', maxWidth: '300px' }} onClick={!gateOpen ? handleBlockedFieldClick : undefined}>
                 <div style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--ink-700)', marginBottom: '6px' }}>
                   Employee ID <span className="we-req">*</span>
                 </div>
@@ -442,16 +466,18 @@ export default function WE4WERegistration() {
                   className="we-input"
                   placeholder="0269"
                   value={employeeId}
-                  onChange={(e) => setEmployeeId(e.target.value.replace(/\D/g, ''))}
-                  disabled={!gateOpen || codeSent || isSending}
-                  readOnly={!gateOpen}
+                  onChange={gateOpen ? (e) => setEmployeeId(e.target.value.replace(/\D/g, '')) : undefined}
+                  onClick={!gateOpen ? handleBlockedFieldClick : undefined}
+                  onFocus={!gateOpen ? (e) => { e.target.blur(); handleBlockedFieldClick(); } : undefined}
+                  readOnly={!gateOpen || codeSent || isSending}
+                  style={!gateOpen ? { cursor: 'pointer' } : {}}
                 />
               </div>
             </div>
 
             {/* Work Email & Send Button */}
             <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap', marginTop: '12px', maxWidth: '640px' }}>
-              <div style={{ flex: '1 1 240px', maxWidth: '360px' }}>
+              <div style={{ flex: '1 1 240px', maxWidth: '360px' }} onClick={!gateOpen ? handleBlockedFieldClick : undefined}>
                 <div style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--ink-700)', marginBottom: '6px' }}>
                   Work email address <span className="we-req">*</span>
                 </div>
@@ -460,15 +486,17 @@ export default function WE4WERegistration() {
                   className="we-input"
                   placeholder="firstname.lastname@zohocorp.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={!gateOpen || codeSent || isSending}
-                  readOnly={!gateOpen}
+                  onChange={gateOpen ? (e) => setEmail(e.target.value) : undefined}
+                  onClick={!gateOpen ? handleBlockedFieldClick : undefined}
+                  onFocus={!gateOpen ? (e) => { e.target.blur(); handleBlockedFieldClick(); } : undefined}
+                  readOnly={!gateOpen || codeSent || isSending}
+                  style={!gateOpen ? { cursor: 'pointer' } : {}}
                 />
               </div>
               <button
                 type="button"
                 onClick={handleSendCode}
-                disabled={!gateOpen || codeSent || isSending || !email || !name || !employeeId}
+                disabled={codeSent || isSending}
                 className="we-btn we-btn-primary"
               >
                 {isSending ? (
