@@ -257,13 +257,15 @@ export default function WE4WERegistration() {
             {LABELS_A.map((label, i) => (
               <div key={i} className="we-consent-row read-only">
                 <div
-                  className="we-checkbox-btn checked read-only"
-                  title="Mandatory consent"
+                  className={`we-checkbox-btn ${consentA[i] ? 'checked' : ''} read-only`}
+                  title="Mandatory privacy consent"
                   aria-label={label}
                 >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 13l4 4L19 7" />
-                  </svg>
+                  {consentA[i] && (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
                 </div>
                 <div className="we-consent-label">
                   {label}
@@ -332,13 +334,15 @@ export default function WE4WERegistration() {
                   {LABELS_B.map((label, i) => (
                     <div key={i} className="we-consent-row read-only">
                       <div
-                        className="we-checkbox-btn checked read-only"
-                        title="Mandatory consent"
+                        className={`we-checkbox-btn ${consentB[i] ? 'checked' : ''} read-only`}
+                        title="Enrolment participation consent"
                         aria-label={label}
                       >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M5 13l4 4L19 7" />
-                        </svg>
+                        {consentB[i] && (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
                       </div>
                       <div className="we-consent-label">
                         {label}
