@@ -30,23 +30,25 @@ function zohoTokenRefreshPlugin() {
           }
         }
 
-        const refreshToken = envConfig.REFRESH_TOKEN || process.env.REFRESH_TOKEN;
         const clientId = envConfig.CLIENT_ID || process.env.CLIENT_ID;
         const clientSecret = envConfig.CLIENT_SECRET || process.env.CLIENT_SECRET;
+        const scope = envConfig.ZOHO_SCOPE || process.env.ZOHO_SCOPE || 'ZohoCRM.functions.execute.READ,ZohoCRM.functions.execute.CREATE,ZohoCRM.modules.ALL';
+        const soid = envConfig.ZOHO_SOID || process.env.ZOHO_SOID;
         const accountsUrl = envConfig.ACCOUNTS_URL || 'https://accounts.zoho.in';
 
-        if (!refreshToken) {
+        if (!clientId || !clientSecret || !soid) {
           res.statusCode = 400;
           res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({ error: 'Missing REFRESH_TOKEN in .env' }));
+          res.end(JSON.stringify({ error: 'Missing CLIENT_ID, CLIENT_SECRET or ZOHO_SOID in .env' }));
           return;
         }
 
         const params = new URLSearchParams({
-          refresh_token: refreshToken,
-          client_id: clientId || '',
-          client_secret: clientSecret || '',
-          grant_type: 'refresh_token',
+          grant_type: 'client_credentials',
+          client_id: clientId,
+          client_secret: clientSecret,
+          scope: scope,
+          soid: soid,
         });
 
         const hostname = accountsUrl.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
