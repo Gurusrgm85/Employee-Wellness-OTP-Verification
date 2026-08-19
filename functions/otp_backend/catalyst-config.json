@@ -4,9 +4,10 @@
 		"stack": "node20",
 		"type": "advancedio",
 		"env_variables": {
-			"REFRESH_TOKEN": "1000.556a8df39712788b40e39e90c46e7996.6397bd4f24a577f7e916440ee341fbca",
-			"CLIENT_ID": "1000.92ERAOM9XDZWXCOYMUY8SCCY1MMKXT",
-			"CLIENT_SECRET": "84e50dadb8c1435ff1398cc7093c59116bde197a04",
+			"CLIENT_ID": "1000.CR8IBVTS05W5CD2GRVXF9RRZDUBCFE",
+			"CLIENT_SECRET": "b106d329ebde08cdacc6b25c6d07b557b41daeec8e",
+			"ZOHO_SCOPE": "ZohoCRM.functions.execute.READ,ZohoCRM.functions.execute.CREATE,ZohoCRM.modules.ALL",
+			"ZOHO_SOID": "ZohoCRM.60027838683",
 			"API_DOMAIN": "https://www.zohoapis.in",
 			"ACCOUNTS_URL": "https://accounts.zoho.in"
 		}

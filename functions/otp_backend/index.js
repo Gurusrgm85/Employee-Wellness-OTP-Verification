@@ -20,36 +20,39 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-let activeAccessToken = process.env.ACCESS_TOKEN || '';
+let activeAccessToken = '';
 let tokenExpiresAt = 0;
 
 const getZohoConfig = () => ({
   clientId: process.env.CLIENT_ID || '',
   clientSecret: process.env.CLIENT_SECRET || '',
-  refreshToken: process.env.REFRESH_TOKEN || '',
+  scope: process.env.ZOHO_SCOPE || 'ZohoCRM.functions.execute.READ,ZohoCRM.functions.execute.CREATE,ZohoCRM.modules.ALL',
+  soid: process.env.ZOHO_SOID || '',
   accountsUrl: (process.env.ACCOUNTS_URL || 'https://accounts.zoho.in').replace(/\/$/, ''),
   apiDomain: (process.env.API_DOMAIN || 'https://www.zohoapis.in').replace(/\/$/, ''),
 });
 
 /**
- * Refresh Zoho OAuth access token
+ * Fetch a fresh Zoho access token via the Client Credentials flow.
+ * No refresh token involved — nothing to expire or revoke.
  */
 async function refreshZohoAccessToken() {
   const config = getZohoConfig();
 
-  if (!config.refreshToken) {
-    throw new Error('REFRESH_TOKEN is not configured in function env variables');
+  if (!config.clientId || !config.clientSecret || !config.soid) {
+    throw new Error('CLIENT_ID, CLIENT_SECRET and ZOHO_SOID must be configured in function env variables');
   }
 
   const params = new URLSearchParams({
-    refresh_token: config.refreshToken,
+    grant_type: 'client_credentials',
     client_id: config.clientId,
     client_secret: config.clientSecret,
-    grant_type: 'refresh_token',
+    scope: config.scope,
+    soid: config.soid,
   });
 
   const url = `${config.accountsUrl}/oauth/v2/token?${params.toString()}`;
-  console.log('🔄 [Function] Requesting fresh Zoho access token...');
+  console.log('🔄 [Function] Requesting Zoho access token via client_credentials...');
 
   const response = await fetch(url, {
     method: 'POST',
@@ -61,15 +64,11 @@ async function refreshZohoAccessToken() {
   if (data.access_token) {
     activeAccessToken = data.access_token;
     tokenExpiresAt = Date.now() + (data.expires_in ? data.expires_in * 1000 : 3600 * 1000);
-    console.log('✅ [Function] Successfully refreshed Zoho access token!');
+    console.log('✅ [Function] Successfully fetched Zoho access token!');
     return data.access_token;
   } else {
-    console.error('❌ [Function] Token refresh failed:', data);
-    let errMsg = data.error || 'Failed to refresh Zoho access token';
-    if (data.error === 'invalid_code') {
-      errMsg = 'Zoho REFRESH_TOKEN is expired or invalid (invalid_code).';
-    }
-    throw new Error(errMsg);
+    console.error('❌ [Function] Token fetch failed:', data);
+    throw new Error(data.error || 'Failed to fetch Zoho access token');
   }
 }
 
@@ -94,7 +93,7 @@ router.get(['/', '/health', '/api/health'], (req, res) => {
     status: 'online',
     service: 'Catalyst Advanced I/O Function (otp_backend)',
     timestamp: new Date().toISOString(),
-    hasZohoCredentials: Boolean(process.env.CLIENT_ID && process.env.REFRESH_TOKEN),
+    hasZohoCredentials: Boolean(process.env.CLIENT_ID && process.env.CLIENT_SECRET && process.env.ZOHO_SOID),
   });
 });
 
