@@ -30,7 +30,7 @@ export default function WE4WERegistration() {
   const [employeeId, setEmployeeId] = useState('');
   const [email, setEmail] = useState('');
 
-  // Privacy & Enrolment Consents
+  // Privacy & Enrolment Consents (Shown only after email is verified)
   const [consentAgreed, setConsentAgreed] = useState(false);
   const [enrolYes, setEnrolYes] = useState(true);
   const [enrolConsentAgreed, setEnrolConsentAgreed] = useState(true);
@@ -102,22 +102,6 @@ export default function WE4WERegistration() {
     setSubmitError('');
   };
 
-  // Auto-scroll to the privacy consent agreement checkbox
-  const handleBlockedFieldClick = () => {
-    if (!consentAgreed) {
-      if (consentCheckboxRef.current) {
-        consentCheckboxRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        consentCheckboxRef.current.classList.remove('we-pulse-highlight');
-        void consentCheckboxRef.current.offsetWidth;
-        consentCheckboxRef.current.classList.add('we-pulse-highlight');
-        setTimeout(() => consentCheckboxRef.current?.classList.remove('we-pulse-highlight'), 1600);
-      } else if (privacyLedgerRef.current) {
-        privacyLedgerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-      setPrivacyError('Please accept the privacy consent agreement below to proceed.');
-    }
-  };
-
   // Handle OTP digit entry
   const handleDigitChange = (index, value) => {
     const digit = String(value).replace(/\D/g, '').slice(-1);
@@ -154,7 +138,7 @@ export default function WE4WERegistration() {
     }
   };
 
-  // 1. Send OTP via Deluge Function (only triggered once)
+  // 1. Send OTP via Deluge Function
   const handleSendCode = async () => {
     clearAllErrors();
 
@@ -216,7 +200,7 @@ export default function WE4WERegistration() {
     }
   };
 
-  // 2. Verify Email OTP locally/against server OTP (Does NOT create record in CRM yet)
+  // 2. Verify Email OTP -> Reveals Privacy Consents & Enrolment below
   const handleVerifyOtp = () => {
     setVerifyError('');
 
@@ -241,7 +225,7 @@ export default function WE4WERegistration() {
       setIsEmailVerified(true);
       setIsVerifyingOtp(false);
       setVerifyError('');
-      console.log('✅ Email verified successfully!');
+      console.log('✅ Email verified! Showing Privacy Consents section.');
     }, 400);
   };
 
@@ -269,11 +253,7 @@ export default function WE4WERegistration() {
     }
 
     if (!isEmailVerified) {
-      if (!codeSent) {
-        setVerifyError('Please click "Send code" and verify your email address before submitting.');
-      } else {
-        setVerifyError('Please enter the 6-digit OTP and click "Verify code" to verify your email.');
-      }
+      setVerifyError('Please verify your email address before submitting.');
       if (verifyBlockRef.current) verifyBlockRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
@@ -354,14 +334,10 @@ export default function WE4WERegistration() {
   return (
     <div className="we-page-wrapper">
       <div className="we-sheet">
-        {/* Header Block */}
+        {/* Header Block: On load shows "Health Camp Registrations" + ZFH Logo */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '20px', flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: '280px' }}>
-            <h1 className="we-header-title">Health Camp Registrations and Privacy Consents</h1>
-            <div className="we-header-desc">
-              Welcome to WE4WE (Wellness Engineered for Workplace Excellence). Participation is voluntary. Purpose:
-              registration for blood screening and/or enrolment into the WE4WE wellness programme.
-            </div>
+            <h1 className="we-header-title">Health Camp Registrations</h1>
           </div>
           <div style={{ flexShrink: 0, paddingTop: '4px' }}>
             <img
@@ -372,20 +348,11 @@ export default function WE4WERegistration() {
           </div>
         </div>
 
-        {/* Quiet Notice Box */}
-        <div className="we-quiet-box">
-          Your personal health information will be used only for healthcare purposes. Individual health information will
-          be accessible only to authorised healthcare professionals. Individual reports will not be shared with HR or
-          management — only anonymised aggregate reports may be used for wellness planning.
-        </div>
-
-        {/* Verification & Sign Block (At Top) */}
+        {/* Verification & Fields Block (Always shown when not done) */}
         {!isDone && (
           <div className="we-verify-block" ref={verifyBlockRef}>
-            <div className="we-enrol-title">Sign with email verification</div>
-
             {/* Name & Employee ID Inputs */}
-            <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginTop: '10px', maxWidth: '640px' }}>
+            <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', maxWidth: '640px' }}>
               <div style={{ flex: '1 1 200px', maxWidth: '300px' }}>
                 <div style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--ink-700)', marginBottom: '6px' }}>
                   Name <span className="we-req">*</span>
@@ -525,192 +492,213 @@ export default function WE4WERegistration() {
           </div>
         )}
 
-        {!isDone && <div className="we-divider" />}
+        {/* ─────────────────────────────────────────────────────────────
+            ONCE EMAIL IS VERIFIED: SHOW PRIVACY CONSENTS & ENROLMENT
+            ───────────────────────────────────────────────────────────── */}
+        {!isDone && isEmailVerified && (
+          <>
+            <div className="we-divider" />
 
-        {/* Privacy Consent Ledger (Section A) — Bullet points with single agreement checkbox */}
-        {!isDone && (
-          <div ref={privacyLedgerRef}>
-            <div className="we-ledger-header">
-              <div className="we-section-label" style={{ margin: 0 }}>
-                Privacy consent ledger
-              </div>
-            </div>
-
-            {/* Bulleted Points */}
-            <div className="we-bullet-list">
-              {LABELS_A.map((label, i) => (
-                <div key={i} className="we-bullet-item">
-                  <span className="we-bullet-dot" />
-                  <div>{label}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Agreement Checkbox */}
-            <div className="we-consent-row" style={{ border: 'none', padding: '6px 0 0 0' }}>
-              <button
-                type="button"
-                ref={consentCheckboxRef}
-                onClick={() => {
-                  setConsentAgreed(!consentAgreed);
-                  setPrivacyError('');
-                }}
-                className={`we-checkbox-btn ${consentAgreed ? 'checked' : ''}`}
-                aria-label="I have read and agree to all the privacy and consent terms above."
-              >
-                {consentAgreed && (
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
-              </button>
-              <div
-                className="we-consent-label"
-                onClick={() => {
-                  setConsentAgreed(!consentAgreed);
-                  setPrivacyError('');
-                }}
-                style={{ fontWeight: 500, color: '#000000' }}
-              >
-                I have read and agree to all the privacy and consent terms above.
-              </div>
-            </div>
-
-            {/* Privacy Section Specific Error */}
-            {privacyError && <div className="we-error-banner" style={{ marginTop: '12px' }}>{privacyError}</div>}
-          </div>
-        )}
-
-        {!isDone && <div className="we-divider" />}
-
-        {/* WE4WE Programme Enrolment */}
-        {!isDone && (
-          <div>
-            <div className="we-enrol-title">WE4WE programme enrolment</div>
-            <div className="we-enrol-desc">
-              Would you like to enrol in the structured WE4WE programme? Blood-screening registration stands either way.
-            </div>
-
-            <div className="we-toggle-row">
-              <button
-                type="button"
-                onClick={() => {
-                  setEnrolYes(true);
-                  setEnrolConsentAgreed(true);
-                  setEnrolError('');
-                }}
-                className={`we-btn ${enrolYes ? 'we-btn-primary' : 'we-btn-secondary'}`}
-              >
-                Yes, enroll me
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setEnrolYes(false);
-                  setEnrolConsentAgreed(false);
-                  setEnrolError('');
-                }}
-                className={`we-btn ${!enrolYes ? 'we-btn-primary' : 'we-btn-secondary'}`}
-              >
-                No, screening only
-              </button>
-            </div>
-
-            {enrolYes && (
+            {/* Section Header: Privacy Consents */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <div className="we-program-grid">
-                  {PROGRAMME_FEATURES.map((item, idx) => (
-                    <div key={idx} className="we-program-card">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand-500)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="9" />
-                        <path d="M8.5 12.3l2.4 2.4 4.6-4.9" />
-                      </svg>
-                      <div>{item}</div>
-                    </div>
-                  ))}
+                <h2 className="we-header-title" style={{ fontSize: '20px' }}>Privacy Consents</h2>
+                <div className="we-header-desc" style={{ marginTop: '6px' }}>
+                  Welcome to WE4WE (Wellness Engineered for Workplace Excellence). Participation is voluntary. Purpose:
+                  registration for blood screening and/or enrolment into the WE4WE wellness programme.
                 </div>
+              </div>
 
-                <div style={{ marginTop: '24px' }}>
-                  <div className="we-ledger-header">
-                    <div className="we-section-label" style={{ margin: 0 }}>
-                      Enrolment consent ledger
-                    </div>
+              {/* Quiet Notice Box */}
+              <div className="we-quiet-box">
+                Your personal health information will be used only for healthcare purposes. Individual health information will
+                be accessible only to authorised healthcare professionals. Individual reports will not be shared with HR or
+                management — only anonymised aggregate reports may be used for wellness planning.
+              </div>
+            </div>
+
+            {/* Privacy Consent Ledger (Section A) */}
+            <div ref={privacyLedgerRef} style={{ marginTop: '8px' }}>
+              <div className="we-ledger-header">
+                <div className="we-section-label" style={{ margin: 0 }}>
+                  Privacy consent ledger
+                </div>
+              </div>
+
+              {/* Bulleted Points */}
+              <div className="we-bullet-list">
+                {LABELS_A.map((label, i) => (
+                  <div key={i} className="we-bullet-item">
+                    <span className="we-bullet-dot" />
+                    <div>{label}</div>
                   </div>
+                ))}
+              </div>
 
-                  {/* Bulleted Points for Enrolment */}
-                  <div className="we-bullet-list">
-                    {LABELS_B.map((label, i) => (
-                      <div key={i} className="we-bullet-item">
-                        <span className="we-bullet-dot" />
-                        <div>{label}</div>
+              {/* Agreement Checkbox */}
+              <div className="we-consent-row" style={{ border: 'none', padding: '6px 0 0 0' }}>
+                <button
+                  type="button"
+                  ref={consentCheckboxRef}
+                  onClick={() => {
+                    setConsentAgreed(!consentAgreed);
+                    setPrivacyError('');
+                  }}
+                  className={`we-checkbox-btn ${consentAgreed ? 'checked' : ''}`}
+                  aria-label="I have read and agree to all the privacy and consent terms above."
+                >
+                  {consentAgreed && (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </button>
+                <div
+                  className="we-consent-label"
+                  onClick={() => {
+                    setConsentAgreed(!consentAgreed);
+                    setPrivacyError('');
+                  }}
+                  style={{ fontWeight: 500, color: '#000000' }}
+                >
+                  I have read and agree to all the privacy and consent terms above.
+                </div>
+              </div>
+
+              {/* Privacy Section Specific Error */}
+              {privacyError && <div className="we-error-banner" style={{ marginTop: '12px' }}>{privacyError}</div>}
+            </div>
+
+            <div className="we-divider" />
+
+            {/* WE4WE Programme Enrolment */}
+            <div>
+              <div className="we-enrol-title">WE4WE programme enrolment</div>
+              <div className="we-enrol-desc">
+                Would you like to enrol in the structured WE4WE programme? Blood-screening registration stands either way.
+              </div>
+
+              <div className="we-toggle-row">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEnrolYes(true);
+                    setEnrolConsentAgreed(true);
+                    setEnrolError('');
+                  }}
+                  className={`we-btn ${enrolYes ? 'we-btn-primary' : 'we-btn-secondary'}`}
+                >
+                  Yes, enroll me
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEnrolYes(false);
+                    setEnrolConsentAgreed(false);
+                    setEnrolError('');
+                  }}
+                  className={`we-btn ${!enrolYes ? 'we-btn-primary' : 'we-btn-secondary'}`}
+                >
+                  No, screening only
+                </button>
+              </div>
+
+              {enrolYes && (
+                <div>
+                  <div className="we-program-grid">
+                    {PROGRAMME_FEATURES.map((item, idx) => (
+                      <div key={idx} className="we-program-card">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand-500)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="9" />
+                          <path d="M8.5 12.3l2.4 2.4 4.6-4.9" />
+                        </svg>
+                        <div>{item}</div>
                       </div>
                     ))}
                   </div>
 
-                  {/* Single Agreement Checkbox for Enrolment */}
-                  <div className="we-consent-row" style={{ border: 'none', padding: '6px 0 0 0' }}>
-                    <button
-                      type="button"
-                      ref={enrolCheckboxRef}
-                      onClick={() => {
-                        setEnrolConsentAgreed(!enrolConsentAgreed);
-                        setEnrolError('');
-                      }}
-                      className={`we-checkbox-btn ${enrolConsentAgreed ? 'checked' : ''}`}
-                      aria-label="I have read and agree to all the enrolment consent terms above."
-                    >
-                      {enrolConsentAgreed && (
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                    </button>
-                    <div
-                      className="we-consent-label"
-                      onClick={() => {
-                        setEnrolConsentAgreed(!enrolConsentAgreed);
-                        setEnrolError('');
-                      }}
-                      style={{ fontWeight: 500, color: '#000000' }}
-                    >
-                      I have read and agree to all the enrolment consent terms above.
+                  <div style={{ marginTop: '24px' }}>
+                    <div className="we-ledger-header">
+                      <div className="we-section-label" style={{ margin: 0 }}>
+                        Enrolment consent ledger
+                      </div>
                     </div>
+
+                    {/* Bulleted Points for Enrolment */}
+                    <div className="we-bullet-list">
+                      {LABELS_B.map((label, i) => (
+                        <div key={i} className="we-bullet-item">
+                          <span className="we-bullet-dot" />
+                          <div>{label}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Single Agreement Checkbox for Enrolment */}
+                    <div className="we-consent-row" style={{ border: 'none', padding: '6px 0 0 0' }}>
+                      <button
+                        type="button"
+                        ref={enrolCheckboxRef}
+                        onClick={() => {
+                          setEnrolConsentAgreed(!enrolConsentAgreed);
+                          setEnrolError('');
+                        }}
+                        className={`we-checkbox-btn ${enrolConsentAgreed ? 'checked' : ''}`}
+                        aria-label="I have read and agree to all the enrolment consent terms above."
+                      >
+                        {enrolConsentAgreed && (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+                      <div
+                        className="we-consent-label"
+                        onClick={() => {
+                          setEnrolConsentAgreed(!enrolConsentAgreed);
+                          setEnrolError('');
+                        }}
+                        style={{ fontWeight: 500, color: '#000000' }}
+                      >
+                        I have read and agree to all the enrolment consent terms above.
+                      </div>
+                    </div>
+
+                    {/* Enrolment Section Specific Error */}
+                    {enrolError && <div className="we-error-banner" style={{ marginTop: '12px' }}>{enrolError}</div>}
                   </div>
-
-                  {/* Enrolment Section Specific Error */}
-                  {enrolError && <div className="we-error-banner" style={{ marginTop: '12px' }}>{enrolError}</div>}
                 </div>
+              )}
+
+              {/* General Submission Error */}
+              {submitError && <div className="we-error-banner" style={{ marginTop: '16px' }}>{submitError}</div>}
+
+              {/* Bottom Action Bar: Cancel & Submit Buttons */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', marginTop: '32px' }}>
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="we-btn we-btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                  className="we-btn we-btn-primary"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <span className="we-spinner" /> Submitting...
+                    </>
+                  ) : (
+                    'Submit'
+                  )}
+                </button>
               </div>
-            )}
-
-            {/* General Submission Error */}
-            {submitError && <div className="we-error-banner" style={{ marginTop: '16px' }}>{submitError}</div>}
-
-            {/* Bottom Action Bar: Cancel & Submit Buttons */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', marginTop: '32px' }}>
-              <button
-                type="button"
-                onClick={handleReset}
-                className="we-btn we-btn-secondary"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="we-btn we-btn-primary"
-              >
-                {isSubmitting ? (
-                  <>
-                    <span className="we-spinner" /> Submitting...
-                  </>
-                ) : (
-                  'Submit'
-                )}
-              </button>
             </div>
-          </div>
+          </>
         )}
 
         {/* Confirmation State */}
