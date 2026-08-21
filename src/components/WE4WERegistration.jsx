@@ -142,11 +142,6 @@ export default function WE4WERegistration() {
   const handleSendCode = async () => {
     clearAllErrors();
 
-    if (!name.trim()) {
-      setVerifyError('Please enter your Name.');
-      return;
-    }
-
     if (!employeeId.trim()) {
       setVerifyError('Please enter your Employee ID.');
       return;
@@ -232,12 +227,6 @@ export default function WE4WERegistration() {
   // 3. Final Submit Button at Bottom (Creates record in Zoho CRM backend)
   const handleSubmit = async () => {
     clearAllErrors();
-
-    if (!name.trim()) {
-      setVerifyError('Please enter your Name.');
-      if (verifyBlockRef.current) verifyBlockRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return;
-    }
 
     if (!employeeId.trim()) {
       setVerifyError('Please enter your Employee ID.');
@@ -351,25 +340,8 @@ export default function WE4WERegistration() {
         {/* Verification & Fields Block (Always shown when not done) */}
         {!isDone && (
           <div className="we-verify-block" ref={verifyBlockRef}>
-            {/* Name & Employee ID Inputs */}
+            {/* Employee ID Input */}
             <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', maxWidth: '640px' }}>
-              <div style={{ flex: '1 1 200px', maxWidth: '300px' }}>
-                <div style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--ink-700)', marginBottom: '6px' }}>
-                  Name <span className="we-req">*</span>
-                </div>
-                <input
-                  type="text"
-                  className="we-input"
-                  placeholder="e.g. Emily Davis"
-                  value={name}
-                  onChange={(e) => {
-                    setName(e.target.value);
-                    setVerifyError('');
-                  }}
-                  disabled={isEmailVerified || isSending}
-                />
-              </div>
-
               <div style={{ flex: '1 1 200px', maxWidth: '300px' }}>
                 <div style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--ink-700)', marginBottom: '6px' }}>
                   Employee ID <span className="we-req">*</span>
