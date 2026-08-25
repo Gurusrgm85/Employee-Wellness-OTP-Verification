@@ -34,6 +34,7 @@ export default function WE4WERegistration() {
   const [consentAgreed, setConsentAgreed] = useState(false);
   const [enrolYes, setEnrolYes] = useState(true);
   const [enrolConsentAgreed, setEnrolConsentAgreed] = useState(true);
+  const [noticeConsentAgreed, setNoticeConsentAgreed] = useState(false);
 
   // OTP Verification State
   const [isSending, setIsSending] = useState(false);
@@ -49,6 +50,7 @@ export default function WE4WERegistration() {
   const [verifyError, setVerifyError] = useState('');
   const [privacyError, setPrivacyError] = useState('');
   const [enrolError, setEnrolError] = useState('');
+  const [noticeError, setNoticeError] = useState('');
   const [submitError, setSubmitError] = useState('');
 
   // Submission State
@@ -62,6 +64,7 @@ export default function WE4WERegistration() {
   const privacyLedgerRef = useRef(null);
   const consentCheckboxRef = useRef(null);
   const enrolCheckboxRef = useRef(null);
+  const noticeCheckboxRef = useRef(null);
   const verifyBlockRef = useRef(null);
 
   const getNowStamp = () => {
@@ -99,6 +102,7 @@ export default function WE4WERegistration() {
     setVerifyError('');
     setPrivacyError('');
     setEnrolError('');
+    setNoticeError('');
     setSubmitError('');
   };
 
@@ -271,6 +275,18 @@ export default function WE4WERegistration() {
       return;
     }
 
+    if (!noticeConsentAgreed) {
+      setNoticeError('Please confirm that you have read the notice and agree to the terms to proceed.');
+      if (noticeCheckboxRef.current) {
+        noticeCheckboxRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        noticeCheckboxRef.current.classList.remove('we-pulse-highlight');
+        void noticeCheckboxRef.current.offsetWidth;
+        noticeCheckboxRef.current.classList.add('we-pulse-highlight');
+        setTimeout(() => noticeCheckboxRef.current?.classList.remove('we-pulse-highlight'), 1600);
+      }
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -282,6 +298,7 @@ export default function WE4WERegistration() {
         enrolYes: enrolYes,
         consentA: [consentAgreed, consentAgreed, consentAgreed, consentAgreed],
         consentB: [enrolConsentAgreed, enrolConsentAgreed, enrolConsentAgreed, enrolConsentAgreed, enrolConsentAgreed],
+        noticeConsentAgreed: noticeConsentAgreed,
       };
 
       const res = await createHealthCampRegistration(registrationPayload);
@@ -308,6 +325,7 @@ export default function WE4WERegistration() {
     setConsentAgreed(false);
     setEnrolYes(true);
     setEnrolConsentAgreed(true);
+    setNoticeConsentAgreed(false);
     setCodeSent(false);
     setIsEmailVerified(false);
     setOtpDigits(['', '', '', '', '', '']);
@@ -472,20 +490,15 @@ export default function WE4WERegistration() {
             <div className="we-divider" />
 
             {/* Section Header: Privacy Consents */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <h2 className="we-header-title" style={{ fontSize: '20px' }}>Privacy Consents</h2>
-                <div className="we-header-desc" style={{ marginTop: '6px' }}>
-                  Welcome to WE4WE (Wellness Engineered for Workplace Excellence). Participation is voluntary. Purpose:
-                  registration for blood screening and/or enrolment into the WE4WE wellness programme.
-                </div>
-              </div>
-
-              {/* Quiet Notice Box */}
-              <div className="we-quiet-box">
-                Your personal health information will be used only for healthcare purposes. Individual health information will
-                be accessible only to authorised healthcare professionals. Individual reports will not be shared with HR or
-                management — only anonymised aggregate reports may be used for wellness planning.
+            <div>
+              <h2 className="we-header-title" style={{ fontSize: '20px' }}>Privacy Consents</h2>
+              <div className="we-header-desc" style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <p style={{ margin: 0 }}>
+                  The WE4WE Health Screening and Wellness Program (“Program”) is an employee wellbeing initiative organised by Zoho Corporation Private Limited (“Zoho”) in association with Sugah Healthcorp Private Limited (“Sugah”). Participation to this Program is voluntary.
+                </p>
+                <p style={{ margin: 0 }}>
+                  The Program includes a health screening, which involves a basic medical check-up to help identify any potential deficiencies or health-related concerns. In addition, employees who are interested may also choose to enrol in the optional wellness program offered by Sugah, which includes clinical evaluation, risk stratification, personalised lifestyle counselling, follow-up at defined intervals, health education and incentives.
+                </p>
               </div>
             </div>
 
@@ -641,6 +654,52 @@ export default function WE4WERegistration() {
                   </div>
                 </div>
               )}
+
+              {/* Note & Notice Consent */}
+              <div style={{ marginTop: '24px' }}>
+                <div className="we-quiet-box" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--ink-900)' }}>Note</div>
+                  <p style={{ margin: 0 }}>
+                    Zoho will not have access to health information, medical history, lifestyle information submitted by you for enrolment in the Program, or your lab test results. Zoho’s access will be limited to your basic registration and appointment-related information.
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    When you register for the Program, the information you submit for participation will be accessible to Sugah for conducting the Program. Further, Sugah’s lab partners will have limited access to your information to the extent necessary for collecting blood samples and making available your lab test results. Sugah and its lab partners will process your information in accordance with applicable law.
+                  </p>
+                </div>
+
+                {/* Notice Consent Checkbox */}
+                <div className="we-consent-row" style={{ border: 'none', padding: '12px 0 0 0' }}>
+                  <button
+                    type="button"
+                    ref={noticeCheckboxRef}
+                    onClick={() => {
+                      setNoticeConsentAgreed(!noticeConsentAgreed);
+                      setNoticeError('');
+                    }}
+                    className={`we-checkbox-btn ${noticeConsentAgreed ? 'checked' : ''}`}
+                    aria-label="I have read the above notice and consent to Sugah and its lab partners’ access to and processing of the information submitted for participation in the Program."
+                  >
+                    {noticeConsentAgreed && (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </button>
+                  <div
+                    className="we-consent-label"
+                    onClick={() => {
+                      setNoticeConsentAgreed(!noticeConsentAgreed);
+                      setNoticeError('');
+                    }}
+                    style={{ fontWeight: 500, color: '#000000', cursor: 'pointer' }}
+                  >
+                    I have read the above notice and consent to Sugah and its lab partners’ access to and processing of the information submitted for participation in the Program.
+                  </div>
+                </div>
+
+                {/* Notice Section Specific Error */}
+                {noticeError && <div className="we-error-banner" style={{ marginTop: '12px' }}>{noticeError}</div>}
+              </div>
 
               {/* General Submission Error */}
               {submitError && <div className="we-error-banner" style={{ marginTop: '16px' }}>{submitError}</div>}
