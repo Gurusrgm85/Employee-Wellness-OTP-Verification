@@ -494,7 +494,7 @@ export default function WE4WERegistration() {
               <h2 className="we-header-title" style={{ fontSize: '20px' }}>Privacy Consents</h2>
               <div className="we-header-desc" style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <p style={{ margin: 0 }}>
-                  The WE4WE Health Screening and Wellness Program (“Program”) is an employee wellbeing initiative organised by Zoho Corporation Private Limited (“Zoho”) in association with Sugah Healthcorp Private Limited (“Sugah”). Participation to this Program is voluntary.
+                  The WE4WE Health Screening and Wellness Program is an employee wellbeing initiative organised by Zoho Corporation Private Limited in association with Sugah Healthcorp Private Limited. Participation to this Program is voluntary.
                 </p>
                 <p style={{ margin: 0 }}>
                   The Program includes a health screening, which involves a basic medical check-up to help identify any potential deficiencies or health-related concerns. In addition, employees who are interested may also choose to enrol in the optional wellness program offered by Sugah, which includes clinical evaluation, risk stratification, personalised lifestyle counselling, follow-up at defined intervals, health education and incentives.
