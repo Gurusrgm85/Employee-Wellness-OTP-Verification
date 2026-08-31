@@ -3,7 +3,6 @@ import { executeDelugeFunction, createHealthCampRegistration } from '../services
 import zfhLogo from '../assets/zfh-logo.png';
 
 const LABELS_A = [
-  'I have read the privacy notice.',
   'I understand participation is voluntary.',
   'I consent to collection and processing of my health information for healthcare purposes.',
   'I understand I may withdraw my consent from the WE4WE programme at any time.',
