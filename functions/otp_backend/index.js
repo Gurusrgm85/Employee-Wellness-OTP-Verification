@@ -174,16 +174,24 @@ router.post(['/zoho/create-registration', '/zoho/create-patient', '/api/zoho/cre
     return res.status(400).json({ error: 'Missing formData payload' });
   }
 
-  const isEnrolled = Boolean(formData.enrolYes && (formData.wellnessConsent ?? formData.we4weEnrollment ?? formData.We4We_Enrollment ?? true));
-  const isPrivacyAgreed = Boolean(formData.I_have_read_the_above_notice_and_consent_to_Sugah ?? formData.privacyConsent ?? formData.consentA?.[0] ?? true);
+  const isEnrolled = Boolean(formData.enrolYes && (formData.wellnessConsent ?? formData.we4weEnrollment ?? formData.We4We_Enrollment ?? formData.WE4WE_Enrollment ?? true));
+  const isPrivacyAgreed = Boolean(formData.I_have_read_the_above_notice_and_consent_to_Sugah_and_its_lab_partners ?? formData.I_have_read_the_above_notice_and_consent_to_Sugah ?? formData.privacyConsent ?? formData.consentA?.[0] ?? true);
 
   const registrationRecord = {
     Name1: formData.name || formData.firstName || '',
     Employee_ID: formData.Employee_ID || formData.employeeId || '',
     Email: formData.Email || formData.email || '',
-    WE4WE_programme_enrolment: isEnrolled,
     We4We_Enrollment: isEnrolled,
     WE4WE_Enrollment: isEnrolled,
+    We4we_Enrollment: isEnrolled,
+    We4We_Enrolment: isEnrolled,
+    WE4WE_programme_enrolment: isEnrolled,
+    WE4WE_Programme_Enrolment: isEnrolled,
+    I_have_read_the_above_notice_and_consent_to_Sugah_and_its_lab_partners: isPrivacyAgreed,
+    I_have_read_the_above_notice_and_consent_to_Sugah_and_its_lab_partner: isPrivacyAgreed,
+    I_have_read_the_above_notice_and_consent_to_Sugah_and_its_lab: isPrivacyAgreed,
+    I_have_read_the_above_notice_and_consent_to_Sugah_and_its: isPrivacyAgreed,
+    I_have_read_the_above_notice_and_consent_to_Sugah_and: isPrivacyAgreed,
     I_have_read_the_above_notice_and_consent_to_Sugah: isPrivacyAgreed,
     I_have_read_the_privacy_notice: isPrivacyAgreed,
     I_understand_participation_is_voluntary: Boolean(formData.consentA?.[1] ?? true),
