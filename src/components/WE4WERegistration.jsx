@@ -295,7 +295,7 @@ export default function WE4WERegistration() {
                 }}
                 placeholder="e.g. 0269"
                 className="we-input"
-                style={{ width: '150px' }}
+                style={{ width: '180px' }}
                 disabled={verified || isSending}
               />
             </label>
