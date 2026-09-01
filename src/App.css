@@ -1,8 +1,50 @@
 /* ──────────────────────────────────────────────────────────────────
-   WE4WE Enrolment Page Design System & Styles
+   WE4WE Enrolment Page Design System & Styles (Zoho Puvi Font)
    ────────────────────────────────────────────────────────────────── */
+
+@font-face {
+  font-family: 'Zoho_Puvi';
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://static.zohocdn.com/zohofonts/zohopuvi/4.0/Zoho_Puvi_Light.woff2') format('woff2'),
+    url('https://static.zohocdn.com/zohofonts/zohopuvi/4.0/Zoho_Puvi_Light.otf') format('opentype');
+}
+@font-face {
+  font-family: 'Zoho_Puvi';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://static.zohocdn.com/zohofonts/zohopuvi/4.0/Zoho_Puvi_Regular.woff2') format('woff2'),
+    url('https://static.zohocdn.com/zohofonts/zohopuvi/4.0/Zoho_Puvi_Regular.otf') format('opentype');
+}
+@font-face {
+  font-family: 'Zoho_Puvi';
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url('https://static.zohocdn.com/zohofonts/zohopuvi/4.0/Zoho_Puvi_Medium.woff2') format('woff2'),
+    url('https://static.zohocdn.com/zohofonts/zohopuvi/4.0/Zoho_Puvi_Medium.otf') format('opentype');
+}
+@font-face {
+  font-family: 'Zoho_Puvi';
+  font-weight: 600;
+  font-style: normal;
+  font-display: block;
+  src: url('https://static.zohocdn.com/zohofonts/zohopuvi/4.0/Zoho_Puvi_Semibold.woff2') format('woff2'),
+    url('https://static.zohocdn.com/zohofonts/zohopuvi/4.0/Zoho_Puvi_Semibold.otf') format('opentype');
+}
+@font-face {
+  font-family: 'Zoho_Puvi';
+  font-weight: 700;
+  font-style: normal;
+  font-display: block;
+  src: url('https://static.zohocdn.com/zohofonts/zohopuvi/4.0/Zoho_Puvi_Bold.woff2') format('woff2'),
+    url('https://static.zohocdn.com/zohofonts/zohopuvi/4.0/Zoho_Puvi_Bold.otf') format('opentype');
+}
+
 :root {
-  --font-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-base: 'Zoho_Puvi', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   
   /* Brand & Accent */
   --primary: #5b57e0;
@@ -44,6 +86,7 @@ body {
   margin: 0;
   background: var(--bg-page);
   font-family: var(--font-base);
+  font-weight: 400;
   font-size: 13px;
   line-height: 1.5;
   color: var(--text-dark);
@@ -60,6 +103,10 @@ a {
 
 a:hover {
   color: var(--primary-hover);
+}
+
+input, button, textarea, select {
+  font-family: var(--font-base);
 }
 
 input::placeholder {
@@ -108,7 +155,7 @@ input::placeholder {
 .we-title {
   margin: 0;
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.3;
   letter-spacing: -0.01em;
   max-width: 28ch;
@@ -137,6 +184,7 @@ input::placeholder {
   flex-direction: column;
   gap: 11px;
   font-size: 12px;
+  font-weight: 400;
   color: var(--text-body);
   line-height: 1.6;
 }
@@ -156,7 +204,7 @@ hr.sep {
 .we-section-title {
   margin: 0 0 14px;
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 500;
   line-height: 1.3;
   color: var(--text-dark);
 }
@@ -164,6 +212,7 @@ hr.sep {
 .we-section-subtitle {
   margin: 0 0 12px;
   font-size: 12px;
+  font-weight: 400;
   color: var(--text-body);
   line-height: 1.55;
 }
@@ -189,6 +238,7 @@ hr.sep {
 .we-input {
   font-family: inherit;
   font-size: 12.5px;
+  font-weight: 400;
   color: var(--text-dark);
   padding: 6px 9px;
   border: 1px solid var(--border-input);
@@ -211,7 +261,7 @@ hr.sep {
 
 .we-input.is-code {
   letter-spacing: 0.08em;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .we-email-row {
@@ -229,7 +279,7 @@ hr.sep {
 .we-btn-send-primary {
   font-family: inherit;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   padding: 6px 14px;
   border-radius: 4px;
   background: var(--primary);
@@ -258,7 +308,7 @@ hr.sep {
 .we-btn-code-sent {
   font-family: inherit;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 400;
   padding: 6px 14px;
   border-radius: 4px;
   background: #f4f6fa;
@@ -287,7 +337,7 @@ hr.sep {
   background: #ffffff;
   font-family: inherit;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 500;
   text-align: center;
   color: var(--text-dark);
   outline: none;
@@ -306,7 +356,7 @@ hr.sep {
 .we-btn-verify-primary {
   font-family: inherit;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   padding: 6px 14px;
   border-radius: 4px;
   background: var(--primary);
@@ -335,6 +385,7 @@ hr.sep {
 .we-btn-ghost {
   font-family: inherit;
   font-size: 12px;
+  font-weight: 400;
   color: var(--primary);
   background: transparent;
   border: none;
@@ -413,7 +464,7 @@ hr.sep {
   border-color: var(--primary);
   background: var(--primary);
   color: #ffffff;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 /* Points to Note */
@@ -424,7 +475,7 @@ hr.sep {
 
 .we-points-header {
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -434,6 +485,7 @@ hr.sep {
 .we-points-sub {
   margin: 0 0 10px;
   font-size: 12px;
+  font-weight: 400;
   color: var(--text-body);
   line-height: 1.55;
 }
@@ -448,6 +500,7 @@ ol.led {
 
 ol.led li {
   font-size: 12px;
+  font-weight: 400;
   color: var(--text-dark);
   line-height: 1.55;
 }
@@ -461,6 +514,7 @@ ol.led li {
   flex-direction: column;
   gap: 11px;
   font-size: 12px;
+  font-weight: 400;
   color: var(--text-body);
   line-height: 1.6;
   background: #fbfbfc;
@@ -490,6 +544,7 @@ ol.led li {
 
 .we-consent-text {
   font-size: 12px;
+  font-weight: 400;
   color: var(--text-dark);
   line-height: 1.5;
 }
@@ -510,7 +565,7 @@ ol.led li {
 
 .we-verified-check {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   color: #0f8a4b;
   line-height: 1;
 }
@@ -523,6 +578,7 @@ ol.led li {
   padding: 12px 16px;
   border-radius: 6px;
   font-size: 13px;
+  font-weight: 400;
   line-height: 1.4;
   margin-top: 14px;
   animation: fadeIn 0.15s ease-out;
@@ -530,6 +586,7 @@ ol.led li {
 
 .we-error-msg {
   font-size: 11.5px;
+  font-weight: 400;
   color: var(--status-error);
   margin-top: 6px;
   line-height: 1.4;
@@ -542,6 +599,7 @@ ol.led li {
   padding: 10px 14px;
   border-radius: 4px;
   font-size: 12px;
+  font-weight: 400;
   line-height: 1.4;
   margin-top: 14px;
 }
@@ -577,7 +635,7 @@ ol.led li {
 .we-btn-submit {
   font-family: inherit;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   padding: 6px 16px;
   border-radius: 4px;
   color: #ffffff;
@@ -653,13 +711,14 @@ ol.led li {
 
 .we-success-title {
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 500;
   color: var(--text-dark);
   margin-bottom: 6px;
 }
 
 .we-success-desc {
   font-size: 13px;
+  font-weight: 400;
   color: var(--text-body);
   max-width: 44ch;
   line-height: 1.5;
@@ -688,10 +747,11 @@ ol.led li {
 
 .we-success-label {
   color: var(--text-muted);
+  font-weight: 400;
 }
 
 .we-success-val {
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-dark);
 }
 
