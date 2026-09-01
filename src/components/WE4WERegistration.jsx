@@ -3,7 +3,6 @@ import { executeDelugeFunction, createHealthCampRegistration } from '../services
 import zfhLogo from '../assets/zfh-logo.png';
 
 export default function WE4WERegistration() {
-  const [step, setStep] = useState(1);
   const [empId, setEmpId] = useState('');
   const [email, setEmail] = useState('');
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
@@ -218,7 +217,6 @@ export default function WE4WERegistration() {
   };
 
   const handleReset = () => {
-    setStep(1);
     setEmpId('');
     setEmail('');
     setOtpDigits(['', '', '', '', '', '']);
@@ -255,298 +253,283 @@ export default function WE4WERegistration() {
         </div>
 
         {!isDone ? (
-          step === 1 ? (
-            <>
-              {/* Intro Paragraphs */}
-              <div className="we-intro">
-                <p>
-                  The WE4WE Health Screening and Wellness Program is an employee wellbeing initiative organised by Zoho
-                  Corporation Private Limited in association with Sugah Healthcorp Private Limited. Participation to this
-                  Program is voluntary.
-                </p>
-                <p>
-                  The Program includes a health screening, which involves a basic medical check-up, including blood tests,
-                  to identify any deficiencies or other health-related concerns. In addition, employees who are interested
-                  may also choose to enrol in the optional wellness program offered by Sugah, which includes clinical
-                  evaluation, risk stratification, personalised lifestyle counselling, follow-up at defined intervals,
-                  health education and incentives.
-                </p>
-              </div>
+          <>
+            {/* Intro Paragraphs */}
+            <div className="we-intro">
+              <p>
+                The WE4WE Health Screening and Wellness Program is an employee wellbeing initiative organised by Zoho
+                Corporation Private Limited in association with Sugah Healthcorp Private Limited. Participation to this
+                Program is voluntary.
+              </p>
+              <p>
+                The Program includes a health screening, which involves a basic medical check-up, including blood tests,
+                to identify any deficiencies or other health-related concerns. In addition, employees who are interested
+                may also choose to enrol in the optional wellness program offered by Sugah, which includes clinical
+                evaluation, risk stratification, personalised lifestyle counselling, follow-up at defined intervals,
+                health education and incentives.
+              </p>
+            </div>
 
-              <hr className="sep" />
+            <hr className="sep" />
 
-              {/* Bottom Action Bar for Step 1 */}
-              <div className="we-actions">
-                <button
-                  type="button"
-                  onClick={() => setStep(2)}
-                  className="we-btn-submit is-active"
-                >
-                  Next
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Your Details */}
-              <h2 className="we-section-title">Your details</h2>
+            {/* Your Details */}
+            <h2 className="we-section-title">Your details</h2>
 
-              {/* Employee ID */}
-              <label className="we-label">
-                <span className="we-label-text">
-                  Employee ID <span className="we-req">*</span>
-                </span>
+            {/* Employee ID */}
+            <label className="we-label">
+              <span className="we-label-text">
+                Employee ID <span className="we-req">*</span>
+              </span>
+              <input
+                type="text"
+                value={empId}
+                onChange={(e) => {
+                  setEmpId(e.target.value);
+                  setCodeError('');
+                }}
+                placeholder="e.g. 0269"
+                className="we-input"
+                style={{ width: '180px' }}
+                disabled={verified || isSending}
+              />
+            </label>
+
+            {/* Work Email Address */}
+            <div className="we-label">
+              <span className="we-label-text">
+                Work email address <span className="we-req">*</span>
+              </span>
+              <div className="we-email-row">
                 <input
-                  type="text"
-                  value={empId}
+                  type="email"
+                  value={email}
                   onChange={(e) => {
-                    setEmpId(e.target.value);
+                    setEmail(e.target.value);
                     setCodeError('');
+                    if (verified) {
+                      setVerified(false);
+                      setSent(false);
+                      setOtpDigits(['', '', '', '', '', '']);
+                    }
                   }}
-                  placeholder="e.g. 0269"
-                  className="we-input"
-                  style={{ width: '180px' }}
+                  placeholder="firstname.lastname@zohocorp.com"
+                  className="we-input we-email-input"
                   disabled={verified || isSending}
                 />
-              </label>
-
-              {/* Work Email Address */}
-              <div className="we-label">
-                <span className="we-label-text">
-                  Work email address <span className="we-req">*</span>
-                </span>
-                <div className="we-email-row">
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      setCodeError('');
-                      if (verified) {
-                        setVerified(false);
-                        setSent(false);
-                        setOtpDigits(['', '', '', '', '', '']);
-                      }
-                    }}
-                    placeholder="firstname.lastname@zohocorp.com"
-                    className="we-input we-email-input"
-                    disabled={verified || isSending}
-                  />
-                  {!verified ? (
-                    sent ? (
-                      <button type="button" disabled className="we-btn-code-sent">
-                        Code sent ✓
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={handleSendCode}
-                        disabled={isSending}
-                        className="we-btn-send-primary"
-                      >
-                        {isSending ? (
-                          <>
-                            <span className="we-spinner" /> Sending...
-                          </>
-                        ) : (
-                          'Send code'
-                        )}
-                      </button>
-                    )
+                {!verified ? (
+                  sent ? (
+                    <button type="button" disabled className="we-btn-code-sent">
+                      Code sent ✓
+                    </button>
                   ) : (
-                    <span className="we-verified-badge">
-                      <span className="we-verified-check" aria-hidden="true">✓</span> Email verified
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Validation / Alert Banner */}
-              {codeError && (
-                <div className="we-alert-banner">
-                  {codeError}
-                </div>
-              )}
-
-              {/* 6-Digit OTP Code Section (Shown when code sent and not verified) */}
-              {sent && !verified && (
-                <div style={{ marginTop: '16px', marginBottom: '10px' }}>
-                  <div className="we-label-text" style={{ marginBottom: '8px' }}>
-                    Enter the 6-digit code
-                  </div>
-
-                  <div className="we-otp-row" onPaste={handlePaste}>
-                    {otpDigits.map((digit, i) => (
-                      <input
-                        key={i}
-                        ref={(el) => (otpInputRefs.current[i] = el)}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        className={`we-otp-cell ${digit ? 'has-val' : ''}`}
-                        value={digit}
-                        onChange={(e) => handleDigitChange(i, e.target.value)}
-                        onKeyDown={(e) => handleKeyDown(i, e)}
-                      />
-                    ))}
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '16px', flexWrap: 'wrap' }}>
                     <button
                       type="button"
-                      onClick={handleVerifyOtp}
-                      disabled={isVerifying || otpDigits.join('').length !== 6}
-                      className="we-btn-verify-primary"
+                      onClick={handleSendCode}
+                      disabled={isSending}
+                      className="we-btn-send-primary"
                     >
-                      {isVerifying ? (
+                      {isSending ? (
                         <>
-                          <span className="we-spinner" /> Verifying...
+                          <span className="we-spinner" /> Sending...
                         </>
                       ) : (
-                        'Verify code'
+                        'Send code'
                       )}
                     </button>
-
-                    {resendSecs > 0 ? (
-                      <span style={{ fontSize: '13px', color: 'var(--text-body)', fontWeight: 400 }}>
-                        Resend in {resendSecs}s
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={handleSendCode}
-                        disabled={isSending}
-                        className="we-btn-ghost"
-                      >
-                        Resend code
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <hr className="sep" />
-
-              {/* Choose Your Participation */}
-              <h2 className="we-section-title" style={{ marginBottom: '3px' }}>
-                Choose your participation
-              </h2>
-              <p className="we-section-subtitle">Select one. Blood-screening registration stands either way.</p>
-
-              <div className="we-pills">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setParticipation('screening');
-                    setWellnessConsent(false);
-                  }}
-                  className={`we-pill-btn ${!wellnessChosen ? 'active' : ''}`}
-                >
-                  Health Screening only
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setParticipation('wellness')}
-                  className={`we-pill-btn ${wellnessChosen ? 'active' : ''}`}
-                >
-                  Health Screening + Wellness Program
-                </button>
+                  )
+                ) : (
+                  <span className="we-verified-badge">
+                    <span className="we-verified-check" aria-hidden="true">✓</span> Email verified
+                  </span>
+                )}
               </div>
+            </div>
 
-              {/* Points to Note (Conditional on Wellness Program) */}
-              {wellnessChosen && (
-                <div className="we-points-block">
-                  <p className="we-points-sub">If you participate in the Wellness Program, here are some points to note:</p>
-                  <ol className="led">
-                    <li>
-                      The Wellness Program is expected to run for approximately one year. However, you may withdraw from
-                      the Wellness Program at any time by sending an email to{' '}
-                      <a href="mailto:consult.appt@sugahhealth.in">consult.appt@sugahhealth.in</a>.
-                    </li>
-                    <li>
-                      Sugah and/or Zoho may send you Wellness Program-related communications and reminders by SMS, email or
-                      phone for administering the Program.
-                    </li>
-                    <li>Participation in the Wellness Program does not guarantee any specific medical outcome.</li>
-                  </ol>
-                  <label className="we-consent-label" style={{ marginTop: '14px' }}>
+            {/* Validation / Alert Banner */}
+            {codeError && (
+              <div className="we-alert-banner">
+                {codeError}
+              </div>
+            )}
+
+            {/* 6-Digit OTP Code Section (Shown when code sent and not verified) */}
+            {sent && !verified && (
+              <div style={{ marginTop: '16px', marginBottom: '10px' }}>
+                <div className="we-label-text" style={{ marginBottom: '8px' }}>
+                  Enter the 6-digit code
+                </div>
+
+                <div className="we-otp-row" onPaste={handlePaste}>
+                  {otpDigits.map((digit, i) => (
                     <input
-                      type="checkbox"
-                      checked={wellnessConsent}
-                      onChange={(e) => setWellnessConsent(e.target.checked)}
-                      className="we-checkbox"
+                      key={i}
+                      ref={(el) => (otpInputRefs.current[i] = el)}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      className={`we-otp-cell ${digit ? 'has-val' : ''}`}
+                      value={digit}
+                      onChange={(e) => handleDigitChange(i, e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(i, e)}
                     />
-                    <span className="we-consent-text">
-                      I have read and understood the above terms relating to participation in the Wellness Program.
-                    </span>
-                  </label>
+                  ))}
                 </div>
-              )}
 
-              <hr className="sep" />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '16px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={handleVerifyOtp}
+                    disabled={isVerifying || otpDigits.join('').length !== 6}
+                    className="we-btn-verify-primary"
+                  >
+                    {isVerifying ? (
+                      <>
+                        <span className="we-spinner" /> Verifying...
+                      </>
+                    ) : (
+                      'Verify code'
+                    )}
+                  </button>
 
-              {/* Privacy Notice */}
-              <h2 className="we-section-title" style={{ marginBottom: '12px' }}>
-                Privacy Notice
-              </h2>
-              <div className="we-notice-box">
-                <p>
-                  When you register for the Program, Zoho will process your registration and appointment-related
-                  information for the purpose of administering and managing the Program. However, Zoho will not access or
-                  process your health information, medical history, lifestyle information submitted for enrolment in the
-                  Program, or your lab test results.
-                </p>
-                <p>
-                  The information you submit for participation in the Program, including your medical history and lifestyle
-                  information, will be accessible to Sugah for conducting the Program. Sugah’s lab partners will have
-                  limited access to your information to the extent required for collecting blood samples and making your lab
-                  test results available. Sugah and its lab partners will process your information in accordance with
-                  applicable laws.
-                </p>
-              </div>
-
-              <label className="we-consent-label" style={{ marginTop: '13px' }}>
-                <input
-                  type="checkbox"
-                  checked={privacyConsent}
-                  onChange={(e) => setPrivacyConsent(e.target.checked)}
-                  className="we-checkbox"
-                />
-                <span className="we-consent-text">
-                  I have read the above notice and consent to Sugah and its lab partners' access to and processing of the
-                  information submitted for participation in the Program.
-                </span>
-              </label>
-
-              {submitError && <div className="we-banner-error">{submitError}</div>}
-
-              {/* Action Buttons */}
-              <div className="we-actions">
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  disabled={isSubmitting}
-                  className="we-btn-cancel"
-                >
-                  Back
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={!isFormValid || isSubmitting}
-                  className={`we-btn-submit ${isFormValid && !isSubmitting ? 'is-active' : 'is-disabled'}`}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <span className="we-spinner" /> Submitting...
-                    </>
+                  {resendSecs > 0 ? (
+                    <span style={{ fontSize: '13px', color: 'var(--text-body)', fontWeight: 400 }}>
+                      Resend in {resendSecs}s
+                    </span>
                   ) : (
-                    'Submit'
+                    <button
+                      type="button"
+                      onClick={handleSendCode}
+                      disabled={isSending}
+                      className="we-btn-ghost"
+                    >
+                      Resend code
+                    </button>
                   )}
-                </button>
+                </div>
               </div>
-            </>
-          )
+            )}
+
+            <hr className="sep" />
+
+            {/* Choose Your Participation */}
+            <h2 className="we-section-title" style={{ marginBottom: '3px' }}>
+              Choose your participation
+            </h2>
+            <p className="we-section-subtitle">Select one. Blood-screening registration stands either way.</p>
+
+            <div className="we-pills">
+              <button
+                type="button"
+                onClick={() => {
+                  setParticipation('screening');
+                  setWellnessConsent(false);
+                }}
+                className={`we-pill-btn ${!wellnessChosen ? 'active' : ''}`}
+              >
+                Health Screening only
+              </button>
+              <button
+                type="button"
+                onClick={() => setParticipation('wellness')}
+                className={`we-pill-btn ${wellnessChosen ? 'active' : ''}`}
+              >
+                Health Screening + Wellness Program
+              </button>
+            </div>
+
+            {/* Points to Note (Conditional on Wellness Program) */}
+            {wellnessChosen && (
+              <div className="we-points-block">
+                <p className="we-points-sub">If you participate in the Wellness Program, here are some points to note:</p>
+                <ol className="led">
+                  <li>
+                    The Wellness Program is expected to run for approximately one year. However, you may withdraw from
+                    the Wellness Program at any time by sending an email to{' '}
+                    <a href="mailto:consult.appt@sugahhealth.in">consult.appt@sugahhealth.in</a>.
+                  </li>
+                  <li>
+                    Sugah and/or Zoho may send you Wellness Program-related communications and reminders by SMS, email or
+                    phone for administering the Program.
+                  </li>
+                  <li>Participation in the Wellness Program does not guarantee any specific medical outcome.</li>
+                </ol>
+                <label className="we-consent-label" style={{ marginTop: '14px' }}>
+                  <input
+                    type="checkbox"
+                    checked={wellnessConsent}
+                    onChange={(e) => setWellnessConsent(e.target.checked)}
+                    className="we-checkbox"
+                  />
+                  <span className="we-consent-text">
+                    I have read and understood the above terms relating to participation in the Wellness Program.
+                  </span>
+                </label>
+              </div>
+            )}
+
+            <hr className="sep" />
+
+            {/* Privacy Notice */}
+            <h2 className="we-section-title" style={{ marginBottom: '12px' }}>
+              Privacy Notice
+            </h2>
+            <div className="we-notice-box">
+              <p>
+                When you register for the Program, Zoho will process your registration and appointment-related
+                information for the purpose of administering and managing the Program. However, Zoho will not access or
+                process your health information, medical history, lifestyle information submitted for enrolment in the
+                Program, or your lab test results.
+              </p>
+              <p>
+                The information you submit for participation in the Program, including your medical history and lifestyle
+                information, will be accessible to Sugah for conducting the Program. Sugah’s lab partners will have
+                limited access to your information to the extent required for collecting blood samples and making your lab
+                test results available. Sugah and its lab partners will process your information in accordance with
+                applicable laws.
+              </p>
+            </div>
+
+            <label className="we-consent-label" style={{ marginTop: '13px' }}>
+              <input
+                type="checkbox"
+                checked={privacyConsent}
+                onChange={(e) => setPrivacyConsent(e.target.checked)}
+                className="we-checkbox"
+              />
+              <span className="we-consent-text">
+                I have read the above notice and consent to Sugah and its lab partners' access to and processing of the
+                information submitted for participation in the Program.
+              </span>
+            </label>
+
+            {submitError && <div className="we-banner-error">{submitError}</div>}
+
+            {/* Action Buttons */}
+            <div className="we-actions">
+              <button
+                type="button"
+                onClick={handleReset}
+                disabled={isSubmitting}
+                className="we-btn-cancel"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={!isFormValid || isSubmitting}
+                className={`we-btn-submit ${isFormValid && !isSubmitting ? 'is-active' : 'is-disabled'}`}
+              >
+                {isSubmitting ? (
+                  <>
+                    <span className="we-spinner" /> Submitting...
+                  </>
+                ) : (
+                  'Submit'
+                )}
+              </button>
+            </div>
+          </>
         ) : (
           /* Confirmation State */
           <div className="we-success-container">
