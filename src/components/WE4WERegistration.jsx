@@ -450,8 +450,8 @@ export default function WE4WERegistration() {
                 <ol className="led">
                   <li>
                     The Wellness Program is expected to run for approximately one year. However, you may withdraw from
-                    the Wellness Program at any time by{' '}
-                    <a href="mailto:consult.appt@sugahhealth.in">sending an email to consult.appt@sugahhealth.in</a>.
+                    the Wellness Program at any time by sending an email to{' '}
+                    <a href="mailto:consult.appt@sugahhealth.in">consult.appt@sugahhealth.in</a>.
                   </li>
                   <li>
                     Sugah and/or Zoho may send you Wellness Program-related communications and reminders by SMS, email or
