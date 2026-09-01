@@ -268,12 +268,6 @@ export default function WE4WERegistration() {
                 evaluation, risk stratification, personalised lifestyle counselling, follow-up at defined intervals,
                 health education and incentives.
               </p>
-              <p>
-                You can find more information about the Program here:{' '}
-                <a href="#details" onClick={(e) => e.preventDefault()}>
-                  Program details
-                </a>
-              </p>
             </div>
 
             <hr className="sep" />
