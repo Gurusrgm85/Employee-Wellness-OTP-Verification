@@ -1,109 +1,51 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { executeDelugeFunction, createHealthCampRegistration } from '../services/zohoService';
 import zfhLogo from '../assets/zfh-logo.png';
 
-const LABELS_A = [
-  'I understand participation is voluntary.',
-  'I consent to collection and processing of my health information for healthcare purposes.',
-  'I understand I may withdraw my consent from the WE4WE programme at any time.',
-];
-
-const LABELS_B = [
-  'I voluntarily wish to participate.',
-  'I understand the programme duration is approximately one year.',
-  'I understand I may withdraw at any time.',
-  'I consent to receive reminders by SMS, email or phone.',
-  'I understand participation does not guarantee any specific medical outcome.',
-];
-
-const PROGRAMME_FEATURES = [
-  'Clinical evaluation',
-  'Risk stratification',
-  'Personalised lifestyle counselling',
-  'Follow-up at defined intervals',
-  'Health education, reminders and incentives',
-];
-
 export default function WE4WERegistration() {
-  const [name, setName] = useState('');
-  const [employeeId, setEmployeeId] = useState('');
+  const [empId, setEmpId] = useState('');
   const [email, setEmail] = useState('');
-
-  // Privacy & Enrolment Consents (Shown only after email is verified)
-  const [consentAgreed, setConsentAgreed] = useState(false);
-  const [enrolYes, setEnrolYes] = useState(true);
-  const [enrolConsentAgreed, setEnrolConsentAgreed] = useState(true);
-  const [noticeConsentAgreed, setNoticeConsentAgreed] = useState(false);
-
-  // OTP Verification State
-  const [isSending, setIsSending] = useState(false);
-  const [codeSent, setCodeSent] = useState(false);
   const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '']);
-  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
-  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const [resendSecs, setResendSecs] = useState(0);
-  const [expirySecs, setExpirySecs] = useState(600);
   const [serverOtp, setServerOtp] = useState(null);
+  const [verified, setVerified] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [codeError, setCodeError] = useState('');
 
-  // Section-specific Error States
-  const [verifyError, setVerifyError] = useState('');
-  const [privacyError, setPrivacyError] = useState('');
-  const [enrolError, setEnrolError] = useState('');
-  const [noticeError, setNoticeError] = useState('');
-  const [submitError, setSubmitError] = useState('');
+  const [participation, setParticipation] = useState('wellness'); // 'screening' | 'wellness'
+  const [wellnessConsent, setWellnessConsent] = useState(false);
+  const [privacyConsent, setPrivacyConsent] = useState(false);
 
-  // Submission State
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDone, setIsDone] = useState(false);
-  const [createdRecordId, setCreatedRecordId] = useState('');
   const [refId, setRefId] = useState('');
+  const [createdRecordId, setCreatedRecordId] = useState('');
   const [signedAt, setSignedAt] = useState('');
+  const [submitError, setSubmitError] = useState('');
 
   const otpInputRefs = useRef([]);
-  const privacyLedgerRef = useRef(null);
-  const consentCheckboxRef = useRef(null);
-  const enrolCheckboxRef = useRef(null);
-  const noticeCheckboxRef = useRef(null);
-  const verifyBlockRef = useRef(null);
 
-  const getNowStamp = () => {
-    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const formatMMSS = (totalSeconds) => {
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = totalSeconds % 60;
-    return `${mins}:${String(secs).padStart(2, '0')}`;
-  };
-
-  // Timer countdown
+  // Timer countdown for resend
   useEffect(() => {
-    let interval;
-    if (codeSent && !isEmailVerified && !isDone) {
-      interval = setInterval(() => {
+    let timer;
+    if (resendSecs > 0) {
+      timer = setInterval(() => {
         setResendSecs((prev) => Math.max(0, prev - 1));
-        setExpirySecs((prev) => Math.max(0, prev - 1));
       }, 1000);
     }
-    return () => clearInterval(interval);
-  }, [codeSent, isEmailVerified, isDone]);
+    return () => clearInterval(timer);
+  }, [resendSecs]);
 
   // Focus first OTP cell on send
   useEffect(() => {
-    if (codeSent && !isEmailVerified && otpInputRefs.current[0]) {
+    if (sent && !verified && otpInputRefs.current[0]) {
       setTimeout(() => {
         otpInputRefs.current[0]?.focus();
       }, 100);
     }
-  }, [codeSent, isEmailVerified]);
-
-  const clearAllErrors = () => {
-    setVerifyError('');
-    setPrivacyError('');
-    setEnrolError('');
-    setNoticeError('');
-    setSubmitError('');
-  };
+  }, [sent, verified]);
 
   // Handle OTP digit entry
   const handleDigitChange = (index, value) => {
@@ -111,7 +53,7 @@ export default function WE4WERegistration() {
     const newOtp = [...otpDigits];
     newOtp[index] = digit;
     setOtpDigits(newOtp);
-    setVerifyError('');
+    setCodeError('');
 
     if (digit && index < 5) {
       otpInputRefs.current[index + 1]?.focus();
@@ -141,18 +83,19 @@ export default function WE4WERegistration() {
     }
   };
 
-  // 1. Send OTP via Deluge Function
+  // Handle OTP sending via Zoho Deluge function
   const handleSendCode = async () => {
-    clearAllErrors();
+    setCodeError('');
+    setSubmitError('');
 
-    if (!employeeId.trim()) {
-      setVerifyError('Please enter your Employee ID.');
+    if (!empId.trim()) {
+      setCodeError('Please enter your Employee ID first.');
       return;
     }
 
     const trimmedEmail = email.trim();
     if (!trimmedEmail || !/^[a-zA-Z0-9._%+-]+@zohocorp\.com$/i.test(trimmedEmail)) {
-      setVerifyError('Please enter a valid work email ending with @zohocorp.com.');
+      setCodeError('Please enter a valid work email ending with @zohocorp.com.');
       return;
     }
 
@@ -163,8 +106,8 @@ export default function WE4WERegistration() {
       const delugeRes = await executeDelugeFunction('otp1', {
         email: trimmedEmail,
         phone: '9876543210',
-        name: name.trim() || 'Employee',
-        first_name: name.trim() || 'Employee',
+        name: `Employee ${empId.trim()}`,
+        first_name: `Employee ${empId.trim()}`,
         action: 'send_otp',
       });
 
@@ -185,152 +128,100 @@ export default function WE4WERegistration() {
         if (match) setServerOtp(match[0]);
       }
 
-      setCodeSent(true);
-      setIsEmailVerified(false);
+      setSent(true);
       setResendSecs(30);
-      setExpirySecs(600);
+      setVerified(false);
       setOtpDigits(['', '', '', '', '', '']);
     } catch (err) {
       console.error('OTP Send Error:', err);
-      setVerifyError(err.message || 'Failed to dispatch OTP. Please check your network and try again.');
+      setCodeError(err.message || 'Failed to dispatch verification code. Please try again.');
     } finally {
       setIsSending(false);
     }
   };
 
-  // 2. Verify Email OTP -> Reveals Privacy Consents & Enrolment below
+  // Handle OTP Verification
   const handleVerifyOtp = () => {
-    setVerifyError('');
-
-    const enteredOtp = otpDigits.join('');
-    if (enteredOtp.length < 6) {
-      setVerifyError('Please enter all 6 digits of the OTP verification code.');
+    const enteredCode = otpDigits.join('');
+    if (enteredCode.length !== 6) {
+      setCodeError('Please enter all 6 digits of the verification code.');
       return;
     }
 
-    if (expirySecs === 0) {
-      setVerifyError('That verification code has expired. Please request a new one.');
+    if (serverOtp && enteredCode !== serverOtp) {
+      setCodeError('Invalid verification code. Please check your email and try again.');
       return;
     }
 
-    if (serverOtp && enteredOtp !== serverOtp) {
-      setVerifyError('Invalid OTP code. Please enter the correct code received in your email.');
-      return;
-    }
-
-    setIsVerifyingOtp(true);
+    setIsVerifying(true);
     setTimeout(() => {
-      setIsEmailVerified(true);
-      setIsVerifyingOtp(false);
-      setVerifyError('');
-      console.log('✅ Email verified! Showing Privacy Consents section.');
-    }, 400);
+      setVerified(true);
+      setIsVerifying(false);
+      setCodeError('');
+      console.log('✅ Email successfully verified!');
+    }, 250);
   };
 
-  // 3. Final Submit Button at Bottom (Creates record in Zoho CRM backend)
+  const wellnessChosen = participation === 'wellness';
+  const isEmailValid = /^[a-zA-Z0-9._%+-]+@zohocorp\.com$/i.test(email.trim());
+  const isFormValid = empId.trim() && isEmailValid && verified && privacyConsent && (!wellnessChosen || wellnessConsent);
+
+  // Form Submission
   const handleSubmit = async () => {
-    clearAllErrors();
+    if (!isFormValid || isSubmitting) return;
 
-    if (!employeeId.trim()) {
-      setVerifyError('Please enter your Employee ID.');
-      if (verifyBlockRef.current) verifyBlockRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return;
-    }
-
-    const trimmedEmail = email.trim();
-    if (!trimmedEmail || !/^[a-zA-Z0-9._%+-]+@zohocorp\.com$/i.test(trimmedEmail)) {
-      setVerifyError('Please enter a valid work email ending with @zohocorp.com.');
-      if (verifyBlockRef.current) verifyBlockRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return;
-    }
-
-    if (!isEmailVerified) {
-      setVerifyError('Please verify your email address before submitting.');
-      if (verifyBlockRef.current) verifyBlockRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return;
-    }
-
-    if (!consentAgreed) {
-      setPrivacyError('Please accept the privacy consent agreement below to proceed.');
-      if (consentCheckboxRef.current) {
-        consentCheckboxRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        consentCheckboxRef.current.classList.remove('we-pulse-highlight');
-        void consentCheckboxRef.current.offsetWidth;
-        consentCheckboxRef.current.classList.add('we-pulse-highlight');
-        setTimeout(() => consentCheckboxRef.current?.classList.remove('we-pulse-highlight'), 1600);
-      }
-      return;
-    }
-
-    if (enrolYes && !enrolConsentAgreed) {
-      setEnrolError('Please accept the enrolment consent agreement above before submitting.');
-      if (enrolCheckboxRef.current) {
-        enrolCheckboxRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        enrolCheckboxRef.current.classList.remove('we-pulse-highlight');
-        void enrolCheckboxRef.current.offsetWidth;
-        enrolCheckboxRef.current.classList.add('we-pulse-highlight');
-        setTimeout(() => enrolCheckboxRef.current?.classList.remove('we-pulse-highlight'), 1600);
-      }
-      return;
-    }
-
-    if (!noticeConsentAgreed) {
-      setNoticeError('Please confirm that you have read the notice and agree to the terms to proceed.');
-      if (noticeCheckboxRef.current) {
-        noticeCheckboxRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        noticeCheckboxRef.current.classList.remove('we-pulse-highlight');
-        void noticeCheckboxRef.current.offsetWidth;
-        noticeCheckboxRef.current.classList.add('we-pulse-highlight');
-        setTimeout(() => noticeCheckboxRef.current?.classList.remove('we-pulse-highlight'), 1600);
-      }
-      return;
-    }
-
+    setSubmitError('');
     setIsSubmitting(true);
 
     try {
-      console.log('🚀 Submitting registration to Zoho CRM Health_Camp_Registrations module...');
-      const registrationPayload = {
-        name: name.trim(),
-        employeeId: employeeId.trim(),
-        email: trimmedEmail,
-        enrolYes: enrolYes,
-        consentA: [consentAgreed, consentAgreed, consentAgreed, consentAgreed],
-        consentB: [enrolConsentAgreed, enrolConsentAgreed, enrolConsentAgreed, enrolConsentAgreed, enrolConsentAgreed],
-        noticeConsentAgreed: noticeConsentAgreed,
+      console.log('🚀 Submitting WE4WE Registration to Zoho CRM...');
+      const payload = {
+        name: `Employee ${empId.trim()}`,
+        employeeId: empId.trim(),
+        Employee_ID: empId.trim(),
+        email: email.trim(),
+        Email: email.trim(),
+        enrolYes: wellnessChosen,
+        wellnessConsent: wellnessChosen ? wellnessConsent : false,
+        we4weEnrollment: wellnessChosen ? wellnessConsent : false,
+        We4We_Enrollment: wellnessChosen ? wellnessConsent : false,
+        privacyConsent: privacyConsent,
+        I_have_read_the_above_notice_and_consent_to_Sugah: privacyConsent,
+        consentA: [privacyConsent, privacyConsent, privacyConsent, privacyConsent],
+        consentB: [wellnessConsent, wellnessConsent, wellnessConsent, wellnessConsent, wellnessConsent],
       };
 
-      const res = await createHealthCampRegistration(registrationPayload);
+      const res = await createHealthCampRegistration(payload);
       const recordId = res?.data?.[0]?.details?.id || 'CRM-' + Math.floor(100000 + Math.random() * 900000);
-
       const generatedRef = 'WE4WE-' + Math.floor(100000 + Math.random() * 899999);
+
       setRefId(generatedRef);
       setCreatedRecordId(recordId);
-      setSignedAt(getNowStamp());
+      setSignedAt(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
       setIsDone(true);
     } catch (err) {
       console.error('Submission error:', err);
-      setSubmitError(err.message || 'Registration failed. Please try again.');
+      setSubmitError(err.message || 'Registration failed. Please check your network and try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Reset form
   const handleReset = () => {
-    setName('');
-    setEmployeeId('');
+    setEmpId('');
     setEmail('');
-    setConsentAgreed(false);
-    setEnrolYes(true);
-    setEnrolConsentAgreed(true);
-    setNoticeConsentAgreed(false);
-    setCodeSent(false);
-    setIsEmailVerified(false);
     setOtpDigits(['', '', '', '', '', '']);
+    setSent(false);
+    setIsSending(false);
     setResendSecs(0);
-    setExpirySecs(600);
-    clearAllErrors();
+    setServerOtp(null);
+    setVerified(false);
+    setIsVerifying(false);
+    setCodeError('');
+    setParticipation('wellness');
+    setWellnessConsent(false);
+    setPrivacyConsent(false);
+    setSubmitError('');
     setIsDone(false);
     setRefId('');
     setCreatedRecordId('');
@@ -338,99 +229,131 @@ export default function WE4WERegistration() {
   };
 
   return (
-    <div className="we-page-wrapper">
-      <div className="we-sheet">
-        {/* Header Block: On load shows "Health Camp Registrations" + ZFH Logo */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '20px', flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: '280px' }}>
-            <h1 className="we-header-title">Health Camp Registrations</h1>
-          </div>
-          <div style={{ flexShrink: 0, paddingTop: '4px' }}>
+    <div className="we-page-container">
+      <div className="we-card">
+        {/* Header Block */}
+        <div className="we-header">
+          <h1 className="we-title">WE4WE Health Screening and Wellness Program</h1>
+          <div className="we-header-logo-wrap">
             <img
               src={zfhLogo}
-              alt="Powered by ZFH"
-              style={{ height: '42px', width: 'auto', objectFit: 'contain', display: 'block' }}
+              alt="Zoho for Healthcare"
+              className="we-header-logo"
             />
           </div>
         </div>
 
-        {/* Verification & Fields Block (Always shown when not done) */}
-        {!isDone && (
-          <div className="we-verify-block" ref={verifyBlockRef}>
-            {/* Employee ID Input */}
-            <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', maxWidth: '640px' }}>
-              <div style={{ flex: '1 1 200px', maxWidth: '300px' }}>
-                <div style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--ink-700)', marginBottom: '6px' }}>
-                  Employee ID <span className="we-req">*</span>
-                </div>
-                <input
-                  type="text"
-                  className="we-input"
-                  placeholder="e.g. 0269"
-                  value={employeeId}
-                  onChange={(e) => {
-                    setEmployeeId(e.target.value);
-                    setVerifyError('');
-                  }}
-                  disabled={isEmailVerified || isSending}
-                />
-              </div>
+        {!isDone ? (
+          <>
+            {/* Intro Paragraphs */}
+            <div className="we-intro">
+              <p>
+                The WE4WE Health Screening and Wellness Program is an employee wellbeing initiative organised by Zoho
+                Corporation Private Limited in association with Sugah Healthcorp Private Limited. Participation to this
+                Program is voluntary.
+              </p>
+              <p>
+                The Program includes a health screening, which involves a basic medical check-up, including blood tests,
+                to identify any deficiencies or other health-related concerns. In addition, employees who are interested
+                may also choose to enrol in the optional wellness program offered by Sugah, which includes clinical
+                evaluation, risk stratification, personalised lifestyle counselling, follow-up at defined intervals,
+                health education and incentives.
+              </p>
+              <p>
+                You can find more information about the Program here:{' '}
+                <a href="#details" onClick={(e) => e.preventDefault()}>
+                  Program details
+                </a>
+              </p>
             </div>
 
-            {/* Work Email & Send Button */}
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap', marginTop: '12px', maxWidth: '640px' }}>
-              <div style={{ flex: '1 1 240px', maxWidth: '360px' }}>
-                <div style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--ink-700)', marginBottom: '6px' }}>
-                  Work email address <span className="we-req">*</span>
-                </div>
+            <hr className="sep" />
+
+            {/* Your Details */}
+            <h2 className="we-section-title">Your details</h2>
+
+            {/* Employee ID */}
+            <label className="we-label">
+              <span className="we-label-text">
+                Employee ID <span className="we-req">*</span>
+              </span>
+              <input
+                type="text"
+                value={empId}
+                onChange={(e) => {
+                  setEmpId(e.target.value);
+                  setCodeError('');
+                }}
+                placeholder="e.g. 0269"
+                className="we-input"
+                style={{ width: '150px' }}
+                disabled={verified || isSending}
+              />
+            </label>
+
+            {/* Work Email Address */}
+            <div className="we-label">
+              <span className="we-label-text">
+                Work email address <span className="we-req">*</span>
+              </span>
+              <div className="we-email-row">
                 <input
                   type="email"
-                  className="we-input"
-                  placeholder="firstname.lastname@zohocorp.com"
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);
-                    setVerifyError('');
+                    setCodeError('');
+                    if (verified) {
+                      setVerified(false);
+                      setSent(false);
+                      setOtpDigits(['', '', '', '', '', '']);
+                    }
                   }}
-                  disabled={isEmailVerified || isSending}
+                  placeholder="firstname.lastname@zohocorp.com"
+                  className="we-input we-email-input"
+                  disabled={verified || isSending}
                 />
-              </div>
-              {!isEmailVerified && (
-                <button
-                  type="button"
-                  onClick={handleSendCode}
-                  disabled={codeSent || isSending}
-                  className="we-btn we-btn-primary"
-                >
-                  {isSending ? (
-                    <>
-                      <span className="we-spinner" /> Sending OTP...
-                    </>
-                  ) : codeSent ? (
-                    'Code sent ✓'
+                {!verified ? (
+                  sent ? (
+                    <button type="button" disabled className="we-btn-code-sent">
+                      Code sent ✓
+                    </button>
                   ) : (
-                    'Send code'
-                  )}
-                </button>
-              )}
-              {isEmailVerified && (
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', height: '38px', color: 'var(--status-done)', fontWeight: 500, fontSize: '13px' }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 13l4 4L19 7" />
-                  </svg>
-                  Email verified
-                </div>
-              )}
+                    <button
+                      type="button"
+                      onClick={handleSendCode}
+                      disabled={isSending}
+                      className="we-btn-send-primary"
+                    >
+                      {isSending ? (
+                        <>
+                          <span className="we-spinner" /> Sending...
+                        </>
+                      ) : (
+                        'Send code'
+                      )}
+                    </button>
+                  )
+                ) : (
+                  <span className="we-verified-badge">
+                    <span className="we-verified-check" aria-hidden="true">✓</span> Email verified
+                  </span>
+                )}
+              </div>
             </div>
 
-            {/* OTP Input Row */}
-            {codeSent && !isEmailVerified && (
-              <div style={{ marginTop: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '16px', flexWrap: 'wrap' }}>
-                  <div style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--ink-700)' }}>Enter the 6-digit code</div>
-                  <div style={{ font: '400 12px/1.4 var(--font-body)', color: 'var(--ink-500)', fontVariantNumeric: 'tabular-nums' }}>
-                    {expirySecs > 0 ? `Expires in ${formatMMSS(expirySecs)}` : 'Code expired'}
-                  </div>
+            {/* Validation / Alert Banner */}
+            {codeError && (
+              <div className="we-alert-banner">
+                {codeError}
+              </div>
+            )}
+
+            {/* 6-Digit OTP Code Section (Shown when code sent and not verified) */}
+            {sent && !verified && (
+              <div style={{ marginTop: '16px', marginBottom: '10px' }}>
+                <div className="we-label-text" style={{ marginBottom: '8px' }}>
+                  Enter the 6-digit code
                 </div>
 
                 <div className="we-otp-row" onPaste={handlePaste}>
@@ -438,6 +361,7 @@ export default function WE4WERegistration() {
                     <input
                       key={i}
                       ref={(el) => (otpInputRefs.current[i] = el)}
+                      type="text"
                       inputMode="numeric"
                       maxLength={1}
                       className={`we-otp-cell ${digit ? 'has-val' : ''}`}
@@ -448,14 +372,14 @@ export default function WE4WERegistration() {
                   ))}
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '18px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '16px', flexWrap: 'wrap' }}>
                   <button
                     type="button"
                     onClick={handleVerifyOtp}
-                    disabled={isVerifyingOtp}
-                    className="we-btn we-btn-primary"
+                    disabled={isVerifying || otpDigits.join('').length !== 6}
+                    className="we-btn-verify-primary"
                   >
-                    {isVerifyingOtp ? (
+                    {isVerifying ? (
                       <>
                         <span className="we-spinner" /> Verifying...
                       </>
@@ -464,286 +388,193 @@ export default function WE4WERegistration() {
                     )}
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={handleSendCode}
-                    disabled={resendSecs > 0 || isSending}
-                    className="we-btn we-btn-ghost"
-                  >
-                    {resendSecs > 0 ? `Resend in ${resendSecs}s` : 'Resend code'}
-                  </button>
+                  {resendSecs > 0 ? (
+                    <span style={{ fontSize: '13px', color: 'var(--text-body)', fontWeight: 400 }}>
+                      Resend in {resendSecs}s
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleSendCode}
+                      disabled={isSending}
+                      className="we-btn-ghost"
+                    >
+                      Resend code
+                    </button>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* Email / Verification Specific Error */}
-            {verifyError && <div className="we-error-banner" style={{ marginTop: '12px' }}>{verifyError}</div>}
-          </div>
-        )}
+            <hr className="sep" />
 
-        {/* ─────────────────────────────────────────────────────────────
-            ONCE EMAIL IS VERIFIED: SHOW PRIVACY CONSENTS & ENROLMENT
-            ───────────────────────────────────────────────────────────── */}
-        {!isDone && isEmailVerified && (
-          <>
-            <div className="we-divider" />
+            {/* Choose Your Participation */}
+            <h2 className="we-section-title" style={{ marginBottom: '3px' }}>
+              Choose your participation
+            </h2>
+            <p className="we-section-subtitle">Select one. Blood-screening registration stands either way.</p>
 
-            {/* Section Header: Privacy Consents */}
-            <div>
-              <h2 className="we-header-title" style={{ fontSize: '20px' }}>Privacy Consents</h2>
-              <div className="we-header-desc" style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <p style={{ margin: 0 }}>
-                  The WE4WE Health Screening and Wellness Program is an employee wellbeing initiative organised by Zoho Corporation Private Limited in association with Sugah Healthcorp Private Limited. Participation to this Program is voluntary.
-                </p>
-                <p style={{ margin: 0 }}>
-                  The Program includes a health screening, which involves a basic medical check-up to help identify any potential deficiencies or health-related concerns. In addition, employees who are interested may also choose to enrol in the optional wellness program offered by Sugah, which includes clinical evaluation, risk stratification, personalised lifestyle counselling, follow-up at defined intervals, health education and incentives.
-                </p>
-              </div>
+            <div className="we-pills">
+              <button
+                type="button"
+                onClick={() => {
+                  setParticipation('screening');
+                  setWellnessConsent(false);
+                }}
+                className={`we-pill-btn ${!wellnessChosen ? 'active' : ''}`}
+              >
+                Health Screening only
+              </button>
+              <button
+                type="button"
+                onClick={() => setParticipation('wellness')}
+                className={`we-pill-btn ${wellnessChosen ? 'active' : ''}`}
+              >
+                Health Screening + Wellness Program
+              </button>
             </div>
 
-            {/* Privacy Consent Ledger (Section A) */}
-            <div ref={privacyLedgerRef} style={{ marginTop: '8px' }}>
-              <div className="we-ledger-header">
-                <div className="we-section-label" style={{ margin: 0 }}>
-                  Privacy consent ledger
-                </div>
+            {/* Points to Note (Conditional on Wellness Program) */}
+            {wellnessChosen && (
+              <div className="we-points-block">
+                <p className="we-points-sub">If you participate in the Wellness Program, here are some points to note:</p>
+                <ol className="led">
+                  <li>
+                    The Wellness Program is expected to run for approximately one year. However, you may withdraw from
+                    the Wellness Program at any time by{' '}
+                    <a href="mailto:consult.appt@sugahhealth.in">sending an email to consult.appt@sugahhealth.in</a>.
+                  </li>
+                  <li>
+                    Sugah and/or Zoho may send you Wellness Program-related communications and reminders by SMS, email or
+                    phone for administering the Program.
+                  </li>
+                  <li>Participation in the Wellness Program does not guarantee any specific medical outcome.</li>
+                </ol>
+                <label className="we-consent-label" style={{ marginTop: '14px' }}>
+                  <input
+                    type="checkbox"
+                    checked={wellnessConsent}
+                    onChange={(e) => setWellnessConsent(e.target.checked)}
+                    className="we-checkbox"
+                  />
+                  <span className="we-consent-text">
+                    I have read and understood the above terms relating to participation in the Wellness Program.
+                  </span>
+                </label>
               </div>
+            )}
 
-              {/* Bulleted Points */}
-              <div className="we-bullet-list">
-                {LABELS_A.map((label, i) => (
-                  <div key={i} className="we-bullet-item">
-                    <span className="we-bullet-dot" />
-                    <div>{label}</div>
-                  </div>
-                ))}
-              </div>
+            <hr className="sep" />
 
-              {/* Agreement Checkbox */}
-              <div className="we-consent-row" style={{ border: 'none', padding: '6px 0 0 0' }}>
-                <button
-                  type="button"
-                  ref={consentCheckboxRef}
-                  onClick={() => {
-                    setConsentAgreed(!consentAgreed);
-                    setPrivacyError('');
-                  }}
-                  className={`we-checkbox-btn ${consentAgreed ? 'checked' : ''}`}
-                  aria-label="I have read and agree to all the privacy and consent terms above."
-                >
-                  {consentAgreed && (
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </button>
-                <div
-                  className="we-consent-label"
-                  onClick={() => {
-                    setConsentAgreed(!consentAgreed);
-                    setPrivacyError('');
-                  }}
-                  style={{ fontWeight: 500, color: '#000000' }}
-                >
-                  I have read and agree to all the privacy and consent terms above.
-                </div>
-              </div>
-
-              {/* Privacy Section Specific Error */}
-              {privacyError && <div className="we-error-banner" style={{ marginTop: '12px' }}>{privacyError}</div>}
+            {/* Privacy Notice */}
+            <h2 className="we-section-title" style={{ marginBottom: '12px' }}>
+              Privacy Notice
+            </h2>
+            <div className="we-notice-box">
+              <p>
+                When you register for the Program, Zoho will process your registration and appointment-related
+                information for the purpose of administering and managing the Program. However, Zoho will not access or
+                process your health information, medical history, lifestyle information submitted for enrolment in the
+                Program, or your lab test results.
+              </p>
+              <p>
+                The information you submit for participation in the Program, including your medical history and lifestyle
+                information, will be accessible to Sugah for conducting the Program. Sugah’s lab partners will have
+                limited access to your information to the extent required for collecting blood samples and making your lab
+                test results available. Sugah and its lab partners will process your information in accordance with
+                applicable laws.
+              </p>
             </div>
 
-            <div className="we-divider" />
+            <label className="we-consent-label" style={{ marginTop: '13px' }}>
+              <input
+                type="checkbox"
+                checked={privacyConsent}
+                onChange={(e) => setPrivacyConsent(e.target.checked)}
+                className="we-checkbox"
+              />
+              <span className="we-consent-text">
+                I have read the above notice and consent to Sugah and its lab partners' access to and processing of the
+                information submitted for participation in the Program.
+              </span>
+            </label>
 
-            {/* WE4WE Programme Enrolment */}
-            <div>
-              <div className="we-enrol-title">WE4WE programme enrolment</div>
-              <div className="we-enrol-desc">
-                Would you like to enrol in the structured WE4WE programme? Blood-screening registration stands either way.
-              </div>
+            {submitError && <div className="we-banner-error">{submitError}</div>}
 
-              <div className="we-toggle-row">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEnrolYes(true);
-                    setEnrolConsentAgreed(true);
-                    setEnrolError('');
-                  }}
-                  className={`we-btn ${enrolYes ? 'we-btn-primary' : 'we-btn-secondary'}`}
-                >
-                  Yes, enroll me
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEnrolYes(false);
-                    setEnrolConsentAgreed(false);
-                    setEnrolError('');
-                  }}
-                  className={`we-btn ${!enrolYes ? 'we-btn-primary' : 'we-btn-secondary'}`}
-                >
-                  No, screening only
-                </button>
-              </div>
-
-              {enrolYes && (
-                <div>
-                  <div className="we-program-grid">
-                    {PROGRAMME_FEATURES.map((item, idx) => (
-                      <div key={idx} className="we-program-card">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--brand-500)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                          <circle cx="12" cy="12" r="9" />
-                          <path d="M8.5 12.3l2.4 2.4 4.6-4.9" />
-                        </svg>
-                        <div>{item}</div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div style={{ marginTop: '24px' }}>
-                    <div className="we-ledger-header">
-                      <div className="we-section-label" style={{ margin: 0 }}>
-                        Enrolment consent ledger
-                      </div>
-                    </div>
-
-                    {/* Bulleted Points for Enrolment */}
-                    <div className="we-bullet-list">
-                      {LABELS_B.map((label, i) => (
-                        <div key={i} className="we-bullet-item">
-                          <span className="we-bullet-dot" />
-                          <div>{label}</div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Single Agreement Checkbox for Enrolment */}
-                    <div className="we-consent-row" style={{ border: 'none', padding: '6px 0 0 0' }}>
-                      <button
-                        type="button"
-                        ref={enrolCheckboxRef}
-                        onClick={() => {
-                          setEnrolConsentAgreed(!enrolConsentAgreed);
-                          setEnrolError('');
-                        }}
-                        className={`we-checkbox-btn ${enrolConsentAgreed ? 'checked' : ''}`}
-                        aria-label="I have read and agree to all the enrolment consent terms above."
-                      >
-                        {enrolConsentAgreed && (
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                      </button>
-                      <div
-                        className="we-consent-label"
-                        onClick={() => {
-                          setEnrolConsentAgreed(!enrolConsentAgreed);
-                          setEnrolError('');
-                        }}
-                        style={{ fontWeight: 500, color: '#000000' }}
-                      >
-                        I have read and agree to all the enrolment consent terms above.
-                      </div>
-                    </div>
-
-                    {/* Enrolment Section Specific Error */}
-                    {enrolError && <div className="we-error-banner" style={{ marginTop: '12px' }}>{enrolError}</div>}
-                  </div>
-                </div>
-              )}
-
-              {/* Note & Notice Consent */}
-              <div style={{ marginTop: '24px' }}>
-                <div className="we-quiet-box" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--ink-900)' }}>Note</div>
-                  <p style={{ margin: 0 }}>
-                    Zoho will not have access to health information, medical history, lifestyle information submitted by you for enrolment in the Program, or your lab test results. Zoho’s access will be limited to your basic registration and appointment-related information.
-                  </p>
-                  <p style={{ margin: 0 }}>
-                    When you register for the Program, the information you submit for participation will be accessible to Sugah for conducting the Program. Further, Sugah’s lab partners will have limited access to your information to the extent necessary for collecting blood samples and making available your lab test results. Sugah and its lab partners will process your information in accordance with applicable law.
-                  </p>
-                </div>
-
-                {/* Notice Consent Checkbox */}
-                <div className="we-consent-row" style={{ border: 'none', padding: '12px 0 0 0' }}>
-                  <button
-                    type="button"
-                    ref={noticeCheckboxRef}
-                    onClick={() => {
-                      setNoticeConsentAgreed(!noticeConsentAgreed);
-                      setNoticeError('');
-                    }}
-                    className={`we-checkbox-btn ${noticeConsentAgreed ? 'checked' : ''}`}
-                    aria-label="I have read the above notice and consent to Sugah and its lab partners’ access to and processing of the information submitted for participation in the Program."
-                  >
-                    {noticeConsentAgreed && (
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M5 13l4 4L19 7" />
-                      </svg>
-                    )}
-                  </button>
-                  <div
-                    className="we-consent-label"
-                    onClick={() => {
-                      setNoticeConsentAgreed(!noticeConsentAgreed);
-                      setNoticeError('');
-                    }}
-                    style={{ fontWeight: 500, color: '#000000', cursor: 'pointer' }}
-                  >
-                    I have read the above notice and consent to Sugah and its lab partners’ access to and processing of the information submitted for participation in the Program.
-                  </div>
-                </div>
-
-                {/* Notice Section Specific Error */}
-                {noticeError && <div className="we-error-banner" style={{ marginTop: '12px' }}>{noticeError}</div>}
-              </div>
-
-              {/* General Submission Error */}
-              {submitError && <div className="we-error-banner" style={{ marginTop: '16px' }}>{submitError}</div>}
-
-              {/* Bottom Action Bar: Cancel & Submit Buttons */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', marginTop: '32px' }}>
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  className="we-btn we-btn-secondary"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={isSubmitting}
-                  className="we-btn we-btn-primary"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <span className="we-spinner" /> Submitting...
-                    </>
-                  ) : (
-                    'Submit'
-                  )}
-                </button>
-              </div>
+            {/* Action Buttons */}
+            <div className="we-actions">
+              <button
+                type="button"
+                onClick={handleReset}
+                disabled={isSubmitting}
+                className="we-btn-cancel"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={!isFormValid || isSubmitting}
+                className={`we-btn-submit ${isFormValid && !isSubmitting ? 'is-active' : 'is-disabled'}`}
+              >
+                {isSubmitting ? (
+                  <>
+                    <span className="we-spinner" /> Submitting...
+                  </>
+                ) : (
+                  'Submit'
+                )}
+              </button>
             </div>
           </>
-        )}
-
-        {/* Confirmation State */}
-        {isDone && (
-          <div className="we-success-card">
-            <div className="we-success-icon-badge">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        ) : (
+          /* Confirmation State */
+          <div className="we-success-container">
+            <div className="we-success-icon-circle">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ font: '500 16px/1.5 var(--font-body)', color: 'var(--ink-900)' }}>
-                Thank you for registering. You will receive a portal invite link shortly.
+            <div>
+              <div className="we-success-title">Registration Submitted</div>
+              <div className="we-success-desc">
+                Thank you for registering. You will receive a confirmation and portal invite link shortly.
               </div>
             </div>
+
+            <div className="we-success-details">
+              <div className="we-success-row">
+                <span className="we-success-label">Reference ID:</span>
+                <span className="we-success-val">{refId}</span>
+              </div>
+              <div className="we-success-row">
+                <span className="we-success-label">Employee ID:</span>
+                <span className="we-success-val">{empId}</span>
+              </div>
+              <div className="we-success-row">
+                <span className="we-success-label">Email:</span>
+                <span className="we-success-val">{email}</span>
+              </div>
+              <div className="we-success-row">
+                <span className="we-success-label">Participation:</span>
+                <span className="we-success-val">
+                  {wellnessChosen ? 'Health Screening + Wellness Program' : 'Health Screening only'}
+                </span>
+              </div>
+              <div className="we-success-row">
+                <span className="we-success-label">Timestamp:</span>
+                <span className="we-success-val">{signedAt}</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleReset}
+              className="we-btn"
+              style={{ marginTop: '8px' }}
+            >
+              Register another employee
+            </button>
           </div>
         )}
       </div>

@@ -174,18 +174,24 @@ router.post(['/zoho/create-registration', '/zoho/create-patient', '/api/zoho/cre
     return res.status(400).json({ error: 'Missing formData payload' });
   }
 
+  const isEnrolled = Boolean(formData.enrolYes && (formData.wellnessConsent ?? formData.we4weEnrollment ?? formData.We4We_Enrollment ?? true));
+  const isPrivacyAgreed = Boolean(formData.I_have_read_the_above_notice_and_consent_to_Sugah ?? formData.privacyConsent ?? formData.consentA?.[0] ?? true);
+
   const registrationRecord = {
     Name1: formData.name || formData.firstName || '',
-    Employee_ID: formData.employeeId || '',
-    Email: formData.email || '',
-    WE4WE_programme_enrolment: Boolean(formData.enrolYes ?? true),
-    I_have_read_the_privacy_notice: Boolean(formData.consentA?.[0] ?? true),
+    Employee_ID: formData.Employee_ID || formData.employeeId || '',
+    Email: formData.Email || formData.email || '',
+    WE4WE_programme_enrolment: isEnrolled,
+    We4We_Enrollment: isEnrolled,
+    WE4WE_Enrollment: isEnrolled,
+    I_have_read_the_above_notice_and_consent_to_Sugah: isPrivacyAgreed,
+    I_have_read_the_privacy_notice: isPrivacyAgreed,
     I_understand_participation_is_voluntary: Boolean(formData.consentA?.[1] ?? true),
     I_consent_to_collection_and_processing_of_my_healt: Boolean(formData.consentA?.[2] ?? true),
     I_understand_I_may_withdraw_my_consent_from_the_WE: Boolean(formData.consentA?.[3] ?? true),
   };
 
-  if (formData.enrolYes) {
+  if (isEnrolled) {
     registrationRecord.I_understand_the_programme_duration_is_approximate = Boolean(formData.consentB?.[1] ?? true);
     registrationRecord.I_understand_I_may_withdraw_at_any_time = Boolean(formData.consentB?.[2] ?? true);
     registrationRecord.I_consent_to_receive_reminders_by_SMS_email_or_pho = Boolean(formData.consentB?.[3] ?? true);
