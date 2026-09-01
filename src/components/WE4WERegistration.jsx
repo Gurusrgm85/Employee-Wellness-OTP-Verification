@@ -570,10 +570,6 @@ export default function WE4WERegistration() {
                   {wellnessChosen ? 'Health Screening + Wellness Program' : 'Health Screening only'}
                 </span>
               </div>
-              <div className="we-success-row">
-                <span className="we-success-label">Timestamp:</span>
-                <span className="we-success-val">{signedAt}</span>
-              </div>
             </div>
 
             <button
