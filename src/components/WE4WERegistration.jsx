@@ -409,126 +409,131 @@ export default function WE4WERegistration() {
               </div>
             )}
 
-            <hr className="sep" />
+            {/* Remaining sections shown only after email is verified */}
+            {verified && (
+              <div style={{ animation: 'fadeIn 0.25s ease-out' }}>
+                <hr className="sep" />
 
-            {/* Choose Your Participation */}
-            <h2 className="we-section-title" style={{ marginBottom: '3px' }}>
-              Choose your participation
-            </h2>
-            <p className="we-section-subtitle">Select one. Blood-screening registration stands either way.</p>
+                {/* Choose Your Participation */}
+                <h2 className="we-section-title" style={{ marginBottom: '3px' }}>
+                  Choose your participation
+                </h2>
+                <p className="we-section-subtitle">Select one. Blood-screening registration stands either way.</p>
 
-            <div className="we-pills">
-              <button
-                type="button"
-                onClick={() => {
-                  setParticipation('screening');
-                  setWellnessConsent(false);
-                }}
-                className={`we-pill-btn ${!wellnessChosen ? 'active' : ''}`}
-              >
-                Health Screening only
-              </button>
-              <button
-                type="button"
-                onClick={() => setParticipation('wellness')}
-                className={`we-pill-btn ${wellnessChosen ? 'active' : ''}`}
-              >
-                Health Screening + Wellness Program
-              </button>
-            </div>
+                <div className="we-pills">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setParticipation('screening');
+                      setWellnessConsent(false);
+                    }}
+                    className={`we-pill-btn ${!wellnessChosen ? 'active' : ''}`}
+                  >
+                    Health Screening only
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setParticipation('wellness')}
+                    className={`we-pill-btn ${wellnessChosen ? 'active' : ''}`}
+                  >
+                    Health Screening + Wellness Program
+                  </button>
+                </div>
 
-            {/* Points to Note (Conditional on Wellness Program) */}
-            {wellnessChosen && (
-              <div className="we-points-block">
-                <p className="we-points-sub">If you participate in the Wellness Program, here are some points to note:</p>
-                <ol className="led">
-                  <li>
-                    The Wellness Program is expected to run for approximately one year. However, you may withdraw from
-                    the Wellness Program at any time by sending an email to{' '}
-                    <a href="mailto:consult.appt@sugahhealth.in">consult.appt@sugahhealth.in</a>.
-                  </li>
-                  <li>
-                    Sugah and/or Zoho may send you Wellness Program-related communications and reminders by SMS, email or
-                    phone for administering the Program.
-                  </li>
-                  <li>Participation in the Wellness Program does not guarantee any specific medical outcome.</li>
-                </ol>
-                <label className="we-consent-label" style={{ marginTop: '14px' }}>
+                {/* Points to Note (Conditional on Wellness Program) */}
+                {wellnessChosen && (
+                  <div className="we-points-block">
+                    <p className="we-points-sub">If you participate in the Wellness Program, here are some points to note:</p>
+                    <ol className="led">
+                      <li>
+                        The Wellness Program is expected to run for approximately one year. However, you may withdraw from
+                        the Wellness Program at any time by sending an email to{' '}
+                        <a href="mailto:consult.appt@sugahhealth.in">consult.appt@sugahhealth.in</a>.
+                      </li>
+                      <li>
+                        Sugah and/or Zoho may send you Wellness Program-related communications and reminders by SMS, email or
+                        phone for administering the Program.
+                      </li>
+                      <li>Participation in the Wellness Program does not guarantee any specific medical outcome.</li>
+                    </ol>
+                    <label className="we-consent-label" style={{ marginTop: '14px' }}>
+                      <input
+                        type="checkbox"
+                        checked={wellnessConsent}
+                        onChange={(e) => setWellnessConsent(e.target.checked)}
+                        className="we-checkbox"
+                      />
+                      <span className="we-consent-text">
+                        I have read and understood the above terms relating to participation in the Wellness Program.
+                      </span>
+                    </label>
+                  </div>
+                )}
+
+                <hr className="sep" />
+
+                {/* Privacy Notice */}
+                <h2 className="we-section-title" style={{ marginBottom: '12px' }}>
+                  Privacy Notice
+                </h2>
+                <div className="we-notice-box">
+                  <p>
+                    When you register for the Program, Zoho will process your registration and appointment-related
+                    information for the purpose of administering and managing the Program. However, Zoho will not access or
+                    process your health information, medical history, lifestyle information submitted for enrolment in the
+                    Program, or your lab test results.
+                  </p>
+                  <p>
+                    The information you submit for participation in the Program, including your medical history and lifestyle
+                    information, will be accessible to Sugah for conducting the Program. Sugah’s lab partners will have
+                    limited access to your information to the extent required for collecting blood samples and making your lab
+                    test results available. Sugah and its lab partners will process your information in accordance with
+                    applicable laws.
+                  </p>
+                </div>
+
+                <label className="we-consent-label" style={{ marginTop: '13px' }}>
                   <input
                     type="checkbox"
-                    checked={wellnessConsent}
-                    onChange={(e) => setWellnessConsent(e.target.checked)}
+                    checked={privacyConsent}
+                    onChange={(e) => setPrivacyConsent(e.target.checked)}
                     className="we-checkbox"
                   />
                   <span className="we-consent-text">
-                    I have read and understood the above terms relating to participation in the Wellness Program.
+                    I have read the above notice and consent to Sugah and its lab partners' access to and processing of the
+                    information submitted for participation in the Program.
                   </span>
                 </label>
+
+                {submitError && <div className="we-banner-error">{submitError}</div>}
+
+                {/* Action Buttons */}
+                <div className="we-actions">
+                  <button
+                    type="button"
+                    onClick={handleReset}
+                    disabled={isSubmitting}
+                    className="we-btn-cancel"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={!isFormValid || isSubmitting}
+                    className={`we-btn-submit ${isFormValid && !isSubmitting ? 'is-active' : 'is-disabled'}`}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <span className="we-spinner" /> Submitting...
+                      </>
+                    ) : (
+                      'Submit'
+                    )}
+                  </button>
+                </div>
               </div>
             )}
-
-            <hr className="sep" />
-
-            {/* Privacy Notice */}
-            <h2 className="we-section-title" style={{ marginBottom: '12px' }}>
-              Privacy Notice
-            </h2>
-            <div className="we-notice-box">
-              <p>
-                When you register for the Program, Zoho will process your registration and appointment-related
-                information for the purpose of administering and managing the Program. However, Zoho will not access or
-                process your health information, medical history, lifestyle information submitted for enrolment in the
-                Program, or your lab test results.
-              </p>
-              <p>
-                The information you submit for participation in the Program, including your medical history and lifestyle
-                information, will be accessible to Sugah for conducting the Program. Sugah’s lab partners will have
-                limited access to your information to the extent required for collecting blood samples and making your lab
-                test results available. Sugah and its lab partners will process your information in accordance with
-                applicable laws.
-              </p>
-            </div>
-
-            <label className="we-consent-label" style={{ marginTop: '13px' }}>
-              <input
-                type="checkbox"
-                checked={privacyConsent}
-                onChange={(e) => setPrivacyConsent(e.target.checked)}
-                className="we-checkbox"
-              />
-              <span className="we-consent-text">
-                I have read the above notice and consent to Sugah and its lab partners' access to and processing of the
-                information submitted for participation in the Program.
-              </span>
-            </label>
-
-            {submitError && <div className="we-banner-error">{submitError}</div>}
-
-            {/* Action Buttons */}
-            <div className="we-actions">
-              <button
-                type="button"
-                onClick={handleReset}
-                disabled={isSubmitting}
-                className="we-btn-cancel"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={!isFormValid || isSubmitting}
-                className={`we-btn-submit ${isFormValid && !isSubmitting ? 'is-active' : 'is-disabled'}`}
-              >
-                {isSubmitting ? (
-                  <>
-                    <span className="we-spinner" /> Submitting...
-                  </>
-                ) : (
-                  'Submit'
-                )}
-              </button>
-            </div>
           </>
         ) : (
           /* Confirmation State */
