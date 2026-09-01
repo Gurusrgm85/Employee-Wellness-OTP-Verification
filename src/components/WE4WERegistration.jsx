@@ -565,15 +565,6 @@ export default function WE4WERegistration() {
                 </span>
               </div>
             </div>
-
-            <button
-              type="button"
-              onClick={handleReset}
-              className="we-btn"
-              style={{ marginTop: '8px' }}
-            >
-              Register another employee
-            </button>
           </div>
         )}
       </div>
