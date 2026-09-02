@@ -546,7 +546,7 @@ export default function WE4WERegistration() {
             <div>
               <div className="we-success-title">Registration Submitted</div>
               <div className="we-success-desc">
-                Thank you for registering. You will receive a confirmation and portal invite link shortly.
+                Thanks for registering! You'll shortly receive an email containing your portal invite link. Please click the link to activate your account and access the portal.
               </div>
             </div>
 
