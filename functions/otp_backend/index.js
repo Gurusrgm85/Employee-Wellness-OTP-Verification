@@ -38,6 +38,50 @@ app.use((req, res, next) => {
 let activeAccessToken = '';
 let tokenExpiresAt = 0;
 
+// Secure In-Memory OTP Store (normalized email -> { otp, expiresAt, attempts })
+const otpStore = new Map();
+
+function saveOtp(email, otp) {
+  const normalizedEmail = (email || '').trim().toLowerCase();
+  if (!normalizedEmail || !otp) return;
+  // 5 minutes TTL
+  const expiresAt = Date.now() + 5 * 60 * 1000;
+  otpStore.set(normalizedEmail, {
+    otp: String(otp).trim(),
+    expiresAt,
+    attempts: 0,
+  });
+  console.log(`🔒 [Function] OTP cached securely for ${normalizedEmail} (expires in 5m)`);
+}
+
+function verifyStoredOtp(email, enteredOtp) {
+  const normalizedEmail = (email || '').trim().toLowerCase();
+  const record = otpStore.get(normalizedEmail);
+
+  if (!record) {
+    return { valid: false, message: 'No verification code requested or code has expired. Please request a new code.' };
+  }
+
+  if (Date.now() > record.expiresAt) {
+    otpStore.delete(normalizedEmail);
+    return { valid: false, message: 'Verification code has expired. Please request a new code.' };
+  }
+
+  if (record.attempts >= 5) {
+    otpStore.delete(normalizedEmail);
+    return { valid: false, message: 'Too many incorrect attempts. Please request a new code.' };
+  }
+
+  record.attempts += 1;
+
+  if (record.otp === String(enteredOtp).trim()) {
+    otpStore.delete(normalizedEmail);
+    return { valid: true, message: 'Verification code confirmed successfully.' };
+  }
+
+  return { valid: false, message: 'Invalid verification code. Please check your email and try again.' };
+}
+
 const getZohoConfig = () => ({
   clientId: process.env.CLIENT_ID || '',
   clientSecret: process.env.CLIENT_SECRET || '',
@@ -131,9 +175,37 @@ router.post(['/refresh-token', '/api/refresh-token'], async (req, res) => {
   }
 });
 
-// 3. Execute Deluge Function Endpoint
+// 3. Execute Deluge Function Endpoint with OTP Sanitization & Server-side Verification
 router.post(['/zoho/execute-function', '/api/zoho/execute-function'], async (req, res) => {
   const { functionName = 'otp1', args = {} } = req.body;
+
+  // If this is a verify_otp request, handle server-side verification directly
+  if (args.action === 'verify_otp') {
+    const entered = args.entered_otp || args.otp || '';
+    const verification = verifyStoredOtp(args.email, entered);
+    if (!verification.valid) {
+      return res.status(400).json({
+        code: 'error',
+        status: 'error',
+        verified: false,
+        message: verification.message,
+        details: {
+          output: {
+            status: 'error',
+            verified: false,
+            message: verification.message,
+          }
+        }
+      });
+    }
+
+    return res.json({
+      code: '200',
+      status: 'success',
+      verified: true,
+      message: verification.message,
+    });
+  }
 
   try {
     const executeCall = async (token) => {
@@ -168,6 +240,46 @@ router.post(['/zoho/execute-function', '/api/zoho/execute-function'], async (req
       return res.status(result.status).json(result.data);
     }
 
+    // Intercept OTP if this is send_otp action or otp1 function
+    if (args.action === 'send_otp' || functionName === 'otp1') {
+      const rawOutput = result.data?.details?.output;
+      let extractedOtp = null;
+
+      if (typeof rawOutput === 'string') {
+        try {
+          const parsed = JSON.parse(rawOutput);
+          if (parsed?.otp) extractedOtp = String(parsed.otp);
+        } catch (e) {}
+        if (!extractedOtp) {
+          const match = rawOutput.match(/\b\d{6}\b/);
+          if (match) extractedOtp = match[0];
+        }
+      } else if (rawOutput && typeof rawOutput === 'object' && rawOutput.otp) {
+        extractedOtp = String(rawOutput.otp);
+      }
+
+      if (!extractedOtp && Array.isArray(result.data?.details?.userMessage)) {
+        for (const msg of result.data.details.userMessage) {
+          const match = String(msg).match(/\b\d{6}\b/);
+          if (match) {
+            extractedOtp = match[0];
+            break;
+          }
+        }
+      }
+
+      if (extractedOtp && args.email) {
+        saveOtp(args.email, extractedOtp);
+      }
+
+      // Return clean, minimal response: NEVER leak OTP or userMessage to browser
+      return res.json({
+        code: '200',
+        status: 'success',
+        message: 'OTP sent successfully',
+      });
+    }
+
     res.json(result.data);
   } catch (err) {
     console.error('Error executing Deluge function:', err);
@@ -182,6 +294,27 @@ router.post(['/zoho/execute-function', '/api/zoho/execute-function'], async (req
     });
   }
 });
+
+// 3b. Dedicated Verify OTP Endpoint
+router.post(['/zoho/verify-otp', '/api/zoho/verify-otp', '/verify-otp'], (req, res) => {
+  const { email, otp } = req.body || {};
+  if (!email || !otp) {
+    return res.status(400).json({ verified: false, message: 'Email and OTP are required' });
+  }
+
+  const result = verifyStoredOtp(email, otp);
+  if (!result.valid) {
+    return res.status(400).json({ verified: false, message: result.message });
+  }
+
+  res.json({
+    code: '200',
+    status: 'success',
+    verified: true,
+    message: result.message,
+  });
+});
+
 
 // 4. Create Health Camp Registration Record in Zoho CRM
 router.post(['/zoho/create-registration', '/zoho/create-patient', '/api/zoho/create-patient'], async (req, res) => {

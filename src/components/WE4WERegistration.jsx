@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { executeDelugeFunction, createHealthCampRegistration } from '../services/zohoService';
+import { sendOtp, verifyOtp, createHealthCampRegistration } from '../services/zohoService';
 import zfhLogo from '../assets/zfh-logo.png';
 
 const SUPPORT_ERROR_MESSAGE = (
@@ -21,7 +21,6 @@ export default function WE4WERegistration() {
   const [sent, setSent] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [resendSecs, setResendSecs] = useState(0);
-  const [serverOtp, setServerOtp] = useState(null);
   const [verified, setVerified] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [codeError, setCodeError] = useState('');
@@ -95,7 +94,7 @@ export default function WE4WERegistration() {
     }
   };
 
-  // Handle OTP sending via Zoho Deluge function
+  // Handle OTP sending via Catalyst server & Zoho Deluge function
   const handleSendCode = async () => {
     setCodeError('');
     setSubmitError('');
@@ -114,28 +113,7 @@ export default function WE4WERegistration() {
     setIsSending(true);
 
     try {
-      const delugeRes = await executeDelugeFunction('otp1', {
-        email: trimmedEmail,
-        phone: '9876543210',
-        name: `Employee ${empId.trim()}`,
-        first_name: `Employee ${empId.trim()}`,
-        action: 'send_otp',
-      });
-
-      const rawOutput = delugeRes?.details?.output;
-      let parsed = rawOutput;
-      if (typeof rawOutput === 'string') {
-        try {
-          parsed = JSON.parse(rawOutput);
-        } catch (e) {}
-      }
-
-      if (parsed && typeof parsed === 'object' && parsed.otp) {
-        setServerOtp(String(parsed.otp));
-      } else if (typeof rawOutput === 'string') {
-        const match = rawOutput.match(/\b\d{6}\b/);
-        if (match) setServerOtp(match[0]);
-      }
+      await sendOtp(trimmedEmail, empId.trim());
 
       setSent(true);
       setResendSecs(30);
@@ -148,25 +126,30 @@ export default function WE4WERegistration() {
     }
   };
 
-  // Handle OTP Verification
-  const handleVerifyOtp = () => {
+  // Handle OTP Verification server-side
+  const handleVerifyOtp = async () => {
     const enteredCode = otpDigits.join('');
     if (enteredCode.length !== 6) {
       setCodeError('Please enter all 6 digits of the verification code.');
       return;
     }
 
-    if (serverOtp && enteredCode !== serverOtp) {
-      setCodeError('Invalid verification code. Please check your email and try again.');
-      return;
-    }
-
     setIsVerifying(true);
-    setTimeout(() => {
-      setVerified(true);
+    setCodeError('');
+
+    try {
+      const res = await verifyOtp(email, enteredCode);
+      if (res.success) {
+        setVerified(true);
+        setCodeError('');
+      } else {
+        setCodeError(res.message || 'Invalid verification code. Please check your email and try again.');
+      }
+    } catch (err) {
+      setCodeError('Verification failed. Please try again.');
+    } finally {
       setIsVerifying(false);
-      setCodeError('');
-    }, 250);
+    }
   };
 
   const wellnessChosen = participation === 'wellness';
@@ -228,7 +211,6 @@ export default function WE4WERegistration() {
     setSent(false);
     setIsSending(false);
     setResendSecs(0);
-    setServerOtp(null);
     setVerified(false);
     setIsVerifying(false);
     setCodeError('');

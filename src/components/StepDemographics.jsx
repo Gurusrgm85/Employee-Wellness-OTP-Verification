@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { createPatientRecord, executeDelugeFunction } from '../services/zohoService';
+import { createPatientRecord, sendOtp, verifyOtp } from '../services/zohoService';
 
 export default function StepDemographics({ data = {}, onChange, onReset }) {
   const [formData, setFormData] = useState({
@@ -25,7 +25,6 @@ export default function StepDemographics({ data = {}, onChange, onReset }) {
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [resendTimer, setResendTimer] = useState(30);
-  const [serverGeneratedOtp, setServerGeneratedOtp] = useState(null);
   const otpInputRefs = useRef([]);
 
   // Auto-dismiss toast after 5 seconds
@@ -264,31 +263,7 @@ export default function StepDemographics({ data = {}, onChange, onReset }) {
     setIsSubmitting(true);
 
     try {
-      const delugeRes = await executeDelugeFunction('otp1', {
-        email: formData.email,
-        phone: formData.mobileNo,
-        name: formData.firstName,
-        first_name: formData.firstName,
-        action: 'send_otp',
-      });
-
-      // Extract OTP if returned in details.output (as JSON string or object)
-      const rawOutput = delugeRes?.details?.output;
-      let parsedOutput = rawOutput;
-      if (typeof rawOutput === 'string') {
-        try {
-          parsedOutput = JSON.parse(rawOutput);
-        } catch (e) {
-          // fallback string parsing
-        }
-      }
-
-      if (parsedOutput && typeof parsedOutput === 'object' && parsedOutput.otp) {
-        setServerGeneratedOtp(String(parsedOutput.otp));
-      } else if (typeof rawOutput === 'string') {
-        const match = rawOutput.match(/\b\d{6}\b/);
-        if (match) setServerGeneratedOtp(match[0]);
-      }
+      await sendOtp(formData.email, formData.firstName, formData.firstName);
 
       // Open OTP Verification Modal
       setOtpDigits(['', '', '', '', '', '']);
@@ -318,29 +293,7 @@ export default function StepDemographics({ data = {}, onChange, onReset }) {
     setOtpError('');
 
     try {
-      const delugeRes = await executeDelugeFunction('otp1', {
-        email: formData.email,
-        phone: formData.mobileNo,
-        name: formData.firstName,
-        action: 'resend_otp',
-      });
-
-      const rawOutput = delugeRes?.details?.output;
-      let parsedOutput = rawOutput;
-      if (typeof rawOutput === 'string') {
-        try {
-          parsedOutput = JSON.parse(rawOutput);
-        } catch (e) {
-          // fallback
-        }
-      }
-
-      if (parsedOutput && typeof parsedOutput === 'object' && parsedOutput.otp) {
-        setServerGeneratedOtp(String(parsedOutput.otp));
-      } else if (typeof rawOutput === 'string') {
-        const match = rawOutput.match(/\b\d{6}\b/);
-        if (match) setServerGeneratedOtp(match[0]);
-      }
+      await sendOtp(formData.email, formData.firstName, formData.firstName);
 
       setResendTimer(30);
       setToast({
@@ -411,31 +364,16 @@ export default function StepDemographics({ data = {}, onChange, onReset }) {
       return;
     }
 
-    // Check if Deluge returned specific OTP
-    if (serverGeneratedOtp && enteredOtp !== serverGeneratedOtp) {
-      setOtpError('Invalid OTP code. Please check your email.');
-      return;
-    }
-
     setIsVerifying(true);
     setOtpError('');
 
     try {
-      // Send verify request to Deluge function
-      try {
-        const verifyRes = await executeDelugeFunction('otp1', {
-          action: 'verify_otp',
-          email: formData.email,
-          phone: formData.mobileNo,
-          entered_otp: enteredOtp,
-          otp: enteredOtp,
-        });
-        if (verifyRes?.details?.output?.status === 'error' || verifyRes?.details?.output?.verified === false) {
-          setOtpError(verifyRes.details.output.message || 'Invalid OTP code.');
-          setIsVerifying(false);
-          return;
-        }
-      } catch (verifyErr) {}
+      const verifyRes = await verifyOtp(formData.email, enteredOtp);
+      if (!verifyRes.success) {
+        setOtpError(verifyRes.message || 'Invalid OTP code.');
+        setIsVerifying(false);
+        return;
+      }
 
       // 1. Create Patient Record in Zoho CRM ONLY NOW
       const res = await createPatientRecord(formData);

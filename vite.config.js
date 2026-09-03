@@ -100,22 +100,40 @@ function zohoTokenRefreshPlugin() {
   };
 }
 
+// Custom Vite plugin to serve local Catalyst backend directly inside Vite dev server
+function localCatalystPlugin() {
+  return {
+    name: 'local-catalyst-plugin',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (req.url && req.url.startsWith('/server/otp_backend')) {
+          try {
+            const { createRequire } = await import('module');
+            const reqHelper = createRequire(import.meta.url);
+            const dotenv = reqHelper('dotenv');
+            dotenv.config();
+            const otpApp = reqHelper('./functions/otp_backend/index.js');
+            return otpApp(req, res, next);
+          } catch (err) {
+            console.error('Error in local Catalyst backend:', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            return res.end(JSON.stringify({ error: err.message }));
+          }
+        }
+        next();
+      });
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
 
   return {
-    plugins: [react(), zohoTokenRefreshPlugin()],
+    plugins: [react(), zohoTokenRefreshPlugin(), localCatalystPlugin()],
     define: {
-      'import.meta.env.ACCESS_TOKEN': JSON.stringify(env.ACCESS_TOKEN),
-      'import.meta.env.REFRESH_TOKEN': JSON.stringify(env.REFRESH_TOKEN),
-      'import.meta.env.SCOPES': JSON.stringify(env.SCOPES),
-      'import.meta.env.API_DOMAIN': JSON.stringify(env.API_DOMAIN),
-      'import.meta.env.TOKEN_TYPE': JSON.stringify(env.TOKEN_TYPE),
-      'import.meta.env.EXPIRES_IN': JSON.stringify(env.EXPIRES_IN),
-      'import.meta.env.CLIENT_ID': JSON.stringify(env.CLIENT_ID),
-      'import.meta.env.CLIENT_SECRET': JSON.stringify(env.CLIENT_SECRET),
-      'import.meta.env.ACCOUNTS_URL': JSON.stringify(env.ACCOUNTS_URL || 'https://accounts.zoho.in'),
       'import.meta.env.VITE_BACKEND_URL': JSON.stringify(env.VITE_BACKEND_URL || 'https://project-rainfall-60085787215.development.catalystserverless.in/server/otp_backend/'),
     },
     server: {

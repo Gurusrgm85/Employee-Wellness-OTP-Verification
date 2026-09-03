@@ -3,23 +3,15 @@
  * Supports token auto-refresh, v7 Deluge execution, and REST API fallback.
  */
 
-const STORAGE_KEY = 'zoho_crm_token_info_v5';
-
 // Environment Configuration
 const CATALYST_FUNCTION_URL = 'https://project-rainfall-60085787215.development.catalystserverless.in/server/otp_backend/';
 
 const CONFIG = {
-  clientId: import.meta.env.CLIENT_ID || import.meta.env.VITE_CLIENT_ID || '',
-  clientSecret: import.meta.env.CLIENT_SECRET || import.meta.env.VITE_CLIENT_SECRET || '',
-  refreshToken: import.meta.env.REFRESH_TOKEN || import.meta.env.VITE_REFRESH_TOKEN || '',
-  accountsUrl: import.meta.env.ACCOUNTS_URL || import.meta.env.VITE_ACCOUNTS_URL || 'https://accounts.zoho.in',
-  apiDomain: import.meta.env.API_DOMAIN || import.meta.env.VITE_API_DOMAIN || 'https://www.zohoapis.in',
-  initialAccessToken: import.meta.env.ACCESS_TOKEN || import.meta.env.VITE_ACCESS_TOKEN || '',
   backendUrl: import.meta.env.VITE_BACKEND_URL || CATALYST_FUNCTION_URL,
 };
 
-// In-memory active token cache
-let memoryAccessToken = CONFIG.initialAccessToken || '';
+// In-memory active token cache (runtime only, never stored in localStorage)
+let memoryAccessToken = '';
 
 // Initialize Zoho Embedded App SDK if available in window
 if (typeof window !== 'undefined' && window.ZOHO && window.ZOHO.embeddedApp) {
@@ -56,32 +48,19 @@ export function normalizeDateToISO(dateStr) {
 }
 
 /**
- * Returns active access token, checking cache or auto-refreshing if expired
+ * Returns active access token from in-memory cache or dev server auto-refresh
  */
 export async function getValidAccessToken(forceRefresh = false) {
   if (!forceRefresh && memoryAccessToken) {
     return memoryAccessToken;
   }
-
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!forceRefresh && saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed.access_token && parsed.expires_at && Date.now() < parsed.expires_at - 60000) {
-        memoryAccessToken = parsed.access_token;
-        return parsed.access_token;
-      }
-    }
-  } catch (e) {}
-
   return await refreshAccessToken();
 }
 
 /**
- * Auto-refreshes Zoho access token using refresh_token
+ * Auto-refreshes Zoho access token via backend dev server (no secrets exposed)
  */
 export async function refreshAccessToken() {
-  // 1. Try internal Vite server auto-refresh plugin (also persists to .env)
   try {
     const serverRes = await fetch('/api/refresh-token', {
       method: 'POST',
@@ -91,52 +70,11 @@ export async function refreshAccessToken() {
     const serverData = await serverRes.json();
     if (serverData.access_token) {
       memoryAccessToken = serverData.access_token;
-      const expiresAt = Date.now() + (serverData.expires_in ? serverData.expires_in * 1000 : 3600 * 1000);
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...serverData, expires_at: expiresAt }));
-      } catch (e) {}
-
       return serverData.access_token;
     }
   } catch (serverErr) {}
 
-  // 2. Direct browser fallback via proxy
-  const refreshToken = CONFIG.refreshToken;
-  const clientId = CONFIG.clientId;
-  const clientSecret = CONFIG.clientSecret;
-
-  if (refreshToken) {
-    try {
-      const endpoint = import.meta.env.DEV
-        ? '/zoho-oauth/oauth/v2/token'
-        : `${CONFIG.accountsUrl.replace(/\/$/, '')}/oauth/v2/token`;
-
-      const params = new URLSearchParams({
-        refresh_token: refreshToken,
-        grant_type: 'refresh_token',
-      });
-
-      if (clientId) params.append('client_id', clientId);
-      if (clientSecret) params.append('client_secret', clientSecret);
-
-      const response = await fetch(`${endpoint}?${params.toString()}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      });
-
-      const data = await response.json();
-      if (data.access_token) {
-        memoryAccessToken = data.access_token;
-        const expiresAt = Date.now() + (data.expires_in ? data.expires_in * 1000 : 3600 * 1000);
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...data, expires_at: expiresAt }));
-        } catch (e) {}
-        return data.access_token;
-      }
-    } catch (directErr) {}
-  }
-
-  return memoryAccessToken || CONFIG.initialAccessToken;
+  return memoryAccessToken;
 }
 
 /**
@@ -145,6 +83,8 @@ export async function refreshAccessToken() {
  * @param {object} argsObj - Arguments to pass to the function (e.g. { phone, email, name })
  */
 export async function executeDelugeFunction(functionName = 'otp1', argsObj = {}, isRetry = false) {
+  let result = null;
+
   // 1. If Catalyst Backend function is configured, use it for secure execution & auto-refresh
   if (CONFIG.backendUrl) {
     try {
@@ -156,7 +96,7 @@ export async function executeDelugeFunction(functionName = 'otp1', argsObj = {},
         body: JSON.stringify({ functionName, args: argsObj }),
       });
 
-      const result = await res.json().catch(() => ({}));
+      result = await res.json().catch(() => ({}));
       if (!res.ok || result.status === 'error') {
         const errorText = result.error || result.message || '';
         const normalized = typeof errorText === 'string' ? errorText.toLowerCase() : '';
@@ -171,7 +111,6 @@ export async function executeDelugeFunction(functionName = 'otp1', argsObj = {},
         }
         throw new Error(errorText || `Backend function execution failed with status ${res.status}`);
       }
-      return result;
     } catch (backendErr) {
       if (!import.meta.env.DEV) {
         throw backendErr;
@@ -180,35 +119,129 @@ export async function executeDelugeFunction(functionName = 'otp1', argsObj = {},
   }
 
   // 2. Direct browser fallback via proxy
-  const accessToken = await getValidAccessToken(isRetry);
-  const encodedArgs = encodeURIComponent(JSON.stringify(argsObj));
+  if (!result) {
+    const accessToken = await getValidAccessToken(isRetry);
+    const encodedArgs = encodeURIComponent(JSON.stringify(argsObj));
 
-  const endpoint = import.meta.env.DEV
-    ? `/zoho-api/crm/v7/functions/${functionName}/actions/execute?auth_type=oauth&arguments=${encodedArgs}`
-    : `${CONFIG.apiDomain.replace(/\/$/, '')}/crm/v7/functions/${functionName}/actions/execute?auth_type=oauth&arguments=${encodedArgs}`;
+    const endpoint = import.meta.env.DEV
+      ? `/zoho-api/crm/v7/functions/${functionName}/actions/execute?auth_type=oauth&arguments=${encodedArgs}`
+      : `${CONFIG.apiDomain.replace(/\/$/, '')}/crm/v7/functions/${functionName}/actions/execute?auth_type=oauth&arguments=${encodedArgs}`;
 
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      Authorization: `Zoho-oauthtoken ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-  });
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        Authorization: `Zoho-oauthtoken ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
 
-  const result = await response.json();
+    result = await response.json();
 
-  // Auto-retry on 401 token expiry
-  if ((response.status === 401 || result.code === 'INVALID_TOKEN') && !isRetry) {
-    await refreshAccessToken();
-    return await executeDelugeFunction(functionName, argsObj, true);
+    // Auto-retry on 401 token expiry
+    if ((response.status === 401 || result.code === 'INVALID_TOKEN') && !isRetry) {
+      await refreshAccessToken();
+      return await executeDelugeFunction(functionName, argsObj, true);
+    }
+
+    if (!response.ok || result.status === 'error') {
+      throw new Error(result.message || `Failed to execute Deluge function ${functionName}`);
+    }
   }
 
-  if (!response.ok || result.status === 'error') {
-    throw new Error(result.message || `Failed to execute Deluge function ${functionName}`);
+  // Security guard: Ensure OTP or internal userMessage is never exposed in client memory
+  if (result?.details) {
+    delete result.details.userMessage;
+    if (typeof result.details.output === 'string') {
+      try {
+        const parsed = JSON.parse(result.details.output);
+        if (parsed && typeof parsed === 'object' && parsed.otp) {
+          delete parsed.otp;
+          result.details.output = JSON.stringify(parsed);
+        }
+      } catch (e) {}
+    } else if (result.details.output && typeof result.details.output === 'object') {
+      delete result.details.output.otp;
+    }
   }
 
   return result;
 }
+
+/**
+ * Triggers sending the OTP code via Catalyst server & Zoho Deluge
+ */
+export async function sendOtp(email, employeeId, name) {
+  const trimmedEmail = (email || '').trim();
+  return await executeDelugeFunction('otp1', {
+    email: trimmedEmail,
+    phone: '9876543210',
+    name: name || `Employee ${(employeeId || '').trim()}`,
+    first_name: name || `Employee ${(employeeId || '').trim()}`,
+    action: 'send_otp',
+  });
+}
+
+/**
+ * Verifies the OTP code server-side via Catalyst server
+ */
+export async function verifyOtp(email, enteredOtp) {
+  const trimmedEmail = (email || '').trim();
+  const trimmedOtp = (enteredOtp || '').trim();
+
+  // Try dedicated Catalyst verify-otp endpoint
+  if (CONFIG.backendUrl) {
+    try {
+      const backendEndpoint = `${CONFIG.backendUrl.replace(/\/$/, '')}/zoho/verify-otp`;
+      const res = await fetch(backendEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ email: trimmedEmail, otp: trimmedOtp }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && (data.verified === true || data.status === 'success')) {
+        return { success: true, message: data.message || 'OTP verified successfully.' };
+      }
+      if (res.status === 400 || res.status === 401 || data.verified === false) {
+        return {
+          success: false,
+          message: data.message || 'Invalid verification code. Please check your email and try again.',
+        };
+      }
+    } catch (e) {
+      // Fall through to Deluge execute-function verification
+    }
+  }
+
+  // Fallback: Deluge executeDelugeFunction with action: 'verify_otp'
+  try {
+    const res = await executeDelugeFunction('otp1', {
+      action: 'verify_otp',
+      email: trimmedEmail,
+      entered_otp: trimmedOtp,
+      otp: trimmedOtp,
+    });
+
+    if (
+      res?.verified === true ||
+      res?.status === 'success' ||
+      res?.details?.output?.verified === true ||
+      res?.details?.output?.status === 'success'
+    ) {
+      return { success: true, message: 'OTP verified successfully.' };
+    }
+
+    return {
+      success: false,
+      message: res?.message || res?.details?.output?.message || 'Invalid verification code. Please check your email and try again.',
+    };
+  } catch (err) {
+    return {
+      success: false,
+      message: err.message || 'Verification failed. Please try again.',
+    };
+  }
+}
+
 
 /**
  * Creates a record in the 'Health_Camp_Registrations' module in Zoho CRM with 401 Auto-Retry
