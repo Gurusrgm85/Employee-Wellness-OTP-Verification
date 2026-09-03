@@ -130,7 +130,18 @@ export default function WE4WERegistration() {
       setVerified(false);
       setOtpDigits(['', '', '', '', '', '']);
     } catch (err) {
-      setCodeError(err.message || 'Failed to dispatch verification code. Please try again.');
+      const msg = err?.message || '';
+      const normalized = msg.toLowerCase();
+      if (
+        normalized.includes('too many request') ||
+        normalized.includes('continuously') ||
+        normalized.includes('access denied') ||
+        normalized.includes('status 500')
+      ) {
+        setCodeError('Too many requests. Please try again after some time.');
+      } else {
+        setCodeError(msg || 'Failed to dispatch verification code. Please try again.');
+      }
     } finally {
       setIsSending(false);
     }

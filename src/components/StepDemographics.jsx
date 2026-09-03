@@ -302,7 +302,15 @@ export default function StepDemographics({ data = {}, onChange, onReset }) {
         message: `An OTP verification code was sent to ${formData.email}`,
       });
     } catch (err) {
-      setErrors({ email: err.message || 'Failed to dispatch verification OTP. Please try again.' });
+      const msg = err?.message || '';
+      const normalized = msg.toLowerCase();
+      const formattedMsg = (
+        normalized.includes('too many request') ||
+        normalized.includes('continuously') ||
+        normalized.includes('access denied') ||
+        normalized.includes('status 500')
+      ) ? 'Too many requests. Please try again after some time.' : (msg || 'Failed to dispatch verification OTP. Please try again.');
+      setErrors({ email: formattedMsg });
     } finally {
       setIsSubmitting(false);
     }

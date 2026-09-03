@@ -83,7 +83,16 @@ async function refreshZohoAccessToken() {
     return data.access_token;
   } else {
     console.error('❌ [Function] Token fetch failed:', data);
-    throw new Error(data.error || 'Failed to fetch Zoho access token');
+    const desc = data.error_description || data.error || '';
+    const normalized = desc.toLowerCase();
+    if (
+      normalized.includes('too many request') ||
+      normalized.includes('continuously') ||
+      normalized.includes('access denied')
+    ) {
+      throw new Error('Too many requests. Please try again after some time.');
+    }
+    throw new Error(desc || 'Failed to fetch Zoho access token');
   }
 }
 
@@ -162,7 +171,15 @@ router.post(['/zoho/execute-function', '/api/zoho/execute-function'], async (req
     res.json(result.data);
   } catch (err) {
     console.error('Error executing Deluge function:', err);
-    res.status(500).json({ error: err.message || 'Deluge execution failed' });
+    const msg = err.message || '';
+    const normalized = msg.toLowerCase();
+    const isRateLimit =
+      normalized.includes('too many request') ||
+      normalized.includes('continuously') ||
+      normalized.includes('access denied');
+    res.status(isRateLimit ? 429 : 500).json({
+      error: isRateLimit ? 'Too many requests. Please try again after some time.' : (err.message || 'Deluge execution failed')
+    });
   }
 });
 
@@ -267,7 +284,15 @@ router.post(['/zoho/create-registration', '/zoho/create-patient', '/api/zoho/cre
     res.json(sanitizedResponse);
   } catch (err) {
     console.error('Error creating registration record:', err);
-    res.status(500).json({ error: err.message || 'Record creation failed' });
+    const msg = err.message || '';
+    const normalized = msg.toLowerCase();
+    const isRateLimit =
+      normalized.includes('too many request') ||
+      normalized.includes('continuously') ||
+      normalized.includes('access denied');
+    res.status(isRateLimit ? 429 : 500).json({
+      error: isRateLimit ? 'Too many requests. Please try again after some time.' : (err.message || 'Record creation failed')
+    });
   }
 });
 

@@ -156,9 +156,20 @@ export async function executeDelugeFunction(functionName = 'otp1', argsObj = {},
         body: JSON.stringify({ functionName, args: argsObj }),
       });
 
-      const result = await res.json();
+      const result = await res.json().catch(() => ({}));
       if (!res.ok || result.status === 'error') {
-        throw new Error(result.message || `Backend function execution failed with status ${res.status}`);
+        const errorText = result.error || result.message || '';
+        const normalized = typeof errorText === 'string' ? errorText.toLowerCase() : '';
+        if (
+          res.status === 429 ||
+          normalized.includes('too many request') ||
+          normalized.includes('continuously') ||
+          normalized.includes('access denied') ||
+          res.status === 500
+        ) {
+          throw new Error('Too many requests. Please try again after some time.');
+        }
+        throw new Error(errorText || `Backend function execution failed with status ${res.status}`);
       }
       return result;
     } catch (backendErr) {
@@ -260,9 +271,20 @@ export async function createHealthCampRegistration(formData, isRetry = false) {
         body: JSON.stringify({ formData }),
       });
 
-      const result = await res.json();
+      const result = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(result.error || result.message || `Backend registration creation failed with status ${res.status}`);
+        const errorText = result.error || result.message || '';
+        const normalized = typeof errorText === 'string' ? errorText.toLowerCase() : '';
+        if (
+          res.status === 429 ||
+          normalized.includes('too many request') ||
+          normalized.includes('continuously') ||
+          normalized.includes('access denied') ||
+          res.status === 500
+        ) {
+          throw new Error('Too many requests. Please try again after some time.');
+        }
+        throw new Error(errorText || `Backend registration creation failed with status ${res.status}`);
       }
       return result;
     } catch (backendErr) {
