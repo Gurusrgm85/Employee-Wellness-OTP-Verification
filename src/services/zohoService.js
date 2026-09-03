@@ -6,7 +6,7 @@
 const STORAGE_KEY = 'zoho_crm_token_info_v5';
 
 // Environment Configuration
-const CATALYST_FUNCTION_URL = 'https://project-rainfall-60072062952.development.catalystserverless.in/server/otp_backend';
+const CATALYST_FUNCTION_URL = 'https://project-rainfall-60072062952.development.catalystserverless.in/server/otp_backend/';
 
 const CONFIG = {
   clientId: import.meta.env.CLIENT_ID || import.meta.env.VITE_CLIENT_ID || '',

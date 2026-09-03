@@ -116,7 +116,7 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.CLIENT_ID': JSON.stringify(env.CLIENT_ID),
       'import.meta.env.CLIENT_SECRET': JSON.stringify(env.CLIENT_SECRET),
       'import.meta.env.ACCOUNTS_URL': JSON.stringify(env.ACCOUNTS_URL || 'https://accounts.zoho.in'),
-      'import.meta.env.VITE_BACKEND_URL': JSON.stringify(env.VITE_BACKEND_URL || 'https://project-rainfall-60072062952.development.catalystserverless.in/server/otp_backend'),
+      'import.meta.env.VITE_BACKEND_URL': JSON.stringify(env.VITE_BACKEND_URL || 'https://project-rainfall-60072062952.development.catalystserverless.in/server/otp_backend/'),
     },
     server: {
       proxy: {
