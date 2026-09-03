@@ -241,7 +241,30 @@ router.post(['/zoho/create-registration', '/zoho/create-patient', '/api/zoho/cre
       return res.status(result.status).json(result.data);
     }
 
-    res.json(result.data);
+    const rawRecord = result.data?.data?.[0] || result.data;
+    const recordId = rawRecord?.details?.id || rawRecord?.id || '';
+
+    // Sanitize response: hide Created_By, Modified_By and user IDs, and provide a clear success message
+    const sanitizedResponse = {
+      code: 'SUCCESS',
+      status: 'success',
+      message: 'Record added successfully.',
+      details: {
+        id: recordId,
+      },
+      data: [
+        {
+          code: 'SUCCESS',
+          status: 'success',
+          message: 'Record added successfully.',
+          details: {
+            id: recordId,
+          },
+        },
+      ],
+    };
+
+    res.json(sanitizedResponse);
   } catch (err) {
     console.error('Error creating registration record:', err);
     res.status(500).json({ error: err.message || 'Record creation failed' });
