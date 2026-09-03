@@ -102,7 +102,6 @@ export default function WE4WERegistration() {
     setIsSending(true);
 
     try {
-      console.log('⚡ Requesting OTP via Deluge Function "otp1"...');
       const delugeRes = await executeDelugeFunction('otp1', {
         email: trimmedEmail,
         phone: '9876543210',
@@ -110,8 +109,6 @@ export default function WE4WERegistration() {
         first_name: `Employee ${empId.trim()}`,
         action: 'send_otp',
       });
-
-      console.log('✅ Deluge OTP Response:', delugeRes);
 
       const rawOutput = delugeRes?.details?.output;
       let parsed = rawOutput;
@@ -133,7 +130,6 @@ export default function WE4WERegistration() {
       setVerified(false);
       setOtpDigits(['', '', '', '', '', '']);
     } catch (err) {
-      console.error('OTP Send Error:', err);
       setCodeError(err.message || 'Failed to dispatch verification code. Please try again.');
     } finally {
       setIsSending(false);
@@ -158,7 +154,6 @@ export default function WE4WERegistration() {
       setVerified(true);
       setIsVerifying(false);
       setCodeError('');
-      console.log('✅ Email successfully verified!');
     }, 250);
   };
 
@@ -174,7 +169,6 @@ export default function WE4WERegistration() {
     setIsSubmitting(true);
 
     try {
-      console.log('🚀 Submitting WE4WE Registration to Zoho CRM...');
       const payload = {
         name: `Employee ${empId.trim()}`,
         employeeId: empId.trim(),
@@ -209,7 +203,6 @@ export default function WE4WERegistration() {
       setSignedAt(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
       setIsDone(true);
     } catch (err) {
-      console.error('Submission error:', err);
       setSubmitError(err.message || 'Registration failed. Please check your network and try again.');
     } finally {
       setIsSubmitting(false);

@@ -25,9 +25,7 @@ let memoryAccessToken = CONFIG.initialAccessToken || '';
 if (typeof window !== 'undefined' && window.ZOHO && window.ZOHO.embeddedApp) {
   try {
     window.ZOHO.embeddedApp.init();
-  } catch (e) {
-    console.log('ZOHO Embedded App SDK init note:', e);
-  }
+  } catch (e) {}
 }
 
 /**
@@ -74,9 +72,7 @@ export async function getValidAccessToken(forceRefresh = false) {
         return parsed.access_token;
       }
     }
-  } catch (e) {
-    console.warn('LocalStorage error:', e);
-  }
+  } catch (e) {}
 
   return await refreshAccessToken();
 }
@@ -85,8 +81,6 @@ export async function getValidAccessToken(forceRefresh = false) {
  * Auto-refreshes Zoho access token using refresh_token
  */
 export async function refreshAccessToken() {
-  console.log('🔄 Auto-refreshing Zoho Access Token...');
-
   // 1. Try internal Vite server auto-refresh plugin (also persists to .env)
   try {
     const serverRes = await fetch('/api/refresh-token', {
@@ -102,12 +96,9 @@ export async function refreshAccessToken() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...serverData, expires_at: expiresAt }));
       } catch (e) {}
 
-      console.log('✅ Access Token auto-generated & saved successfully!');
       return serverData.access_token;
     }
-  } catch (serverErr) {
-    console.warn('Vite auto-refresh gateway notice:', serverErr);
-  }
+  } catch (serverErr) {}
 
   // 2. Direct browser fallback via proxy
   const refreshToken = CONFIG.refreshToken;
@@ -142,9 +133,7 @@ export async function refreshAccessToken() {
         } catch (e) {}
         return data.access_token;
       }
-    } catch (directErr) {
-      console.warn('Direct refresh notice:', directErr);
-    }
+    } catch (directErr) {}
   }
 
   return memoryAccessToken || CONFIG.initialAccessToken;
@@ -160,7 +149,6 @@ export async function executeDelugeFunction(functionName = 'otp1', argsObj = {},
   if (CONFIG.backendUrl) {
     try {
       const backendEndpoint = `${CONFIG.backendUrl.replace(/\/$/, '')}/zoho/execute-function`;
-      console.log(`⚡ [Catalyst Function] Executing Deluge [${functionName}] via backend:`, backendEndpoint);
 
       const res = await fetch(backendEndpoint, {
         method: 'POST',
@@ -174,7 +162,6 @@ export async function executeDelugeFunction(functionName = 'otp1', argsObj = {},
       }
       return result;
     } catch (backendErr) {
-      console.warn('Catalyst backend execution failed, falling back to direct API:', backendErr);
       if (!import.meta.env.DEV) {
         throw backendErr;
       }
@@ -189,8 +176,6 @@ export async function executeDelugeFunction(functionName = 'otp1', argsObj = {},
     ? `/zoho-api/crm/v7/functions/${functionName}/actions/execute?auth_type=oauth&arguments=${encodedArgs}`
     : `${CONFIG.apiDomain.replace(/\/$/, '')}/crm/v7/functions/${functionName}/actions/execute?auth_type=oauth&arguments=${encodedArgs}`;
 
-  console.log(`⚡ Executing Deluge function [${functionName}] with args:`, argsObj);
-
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
@@ -200,11 +185,9 @@ export async function executeDelugeFunction(functionName = 'otp1', argsObj = {},
   });
 
   const result = await response.json();
-  console.log(`📥 Deluge response for [${functionName}]:`, result);
 
   // Auto-retry on 401 token expiry
   if ((response.status === 401 || result.code === 'INVALID_TOKEN') && !isRetry) {
-    console.log('🔄 Token expired during function execution. Retrying with fresh token...');
     await refreshAccessToken();
     return await executeDelugeFunction(functionName, argsObj, true);
   }
@@ -255,26 +238,21 @@ export async function createHealthCampRegistration(formData, isRetry = false) {
   // 1. Check if ZRC / Zoho Embedded App SDK is active
   if (typeof window !== 'undefined' && window.ZOHO && window.ZOHO.CRM && window.ZOHO.CRM.API) {
     try {
-      console.log('🚀 Using ZRC (Zoho CRM JS SDK) insertRecord method...');
       const sdkResult = await window.ZOHO.CRM.API.insertRecord({
         Entity: 'Health_Camp_Registrations',
         APIData: registrationRecord,
         Trigger: ['workflow'],
       });
-      console.log('📥 ZRC insertRecord response:', sdkResult);
       if (sdkResult && sdkResult.data && sdkResult.data[0] && sdkResult.data[0].code === 'SUCCESS') {
         return sdkResult;
       }
-    } catch (sdkErr) {
-      console.warn('ZRC insertRecord failed, falling back to Catalyst/REST:', sdkErr);
-    }
+    } catch (sdkErr) {}
   }
 
   // 2. Catalyst Backend Function
   if (CONFIG.backendUrl) {
     try {
       const backendEndpoint = `${CONFIG.backendUrl.replace(/\/$/, '')}/zoho/create-registration`;
-      console.log(`📤 [Catalyst Function] Creating Health Camp Registration via backend:`, backendEndpoint);
 
       const res = await fetch(backendEndpoint, {
         method: 'POST',
@@ -288,7 +266,6 @@ export async function createHealthCampRegistration(formData, isRetry = false) {
       }
       return result;
     } catch (backendErr) {
-      console.warn('Catalyst backend registration creation failed, falling back to direct REST API:', backendErr);
       if (!import.meta.env.DEV) {
         throw backendErr;
       }
@@ -305,8 +282,6 @@ export async function createHealthCampRegistration(formData, isRetry = false) {
     ? '/zoho-api/crm/v7/Health_Camp_Registrations'
     : `${CONFIG.apiDomain.replace(/\/$/, '')}/crm/v7/Health_Camp_Registrations`;
 
-  console.log('📤 Submitting Health Camp Registration via REST API:', JSON.stringify(payload, null, 2));
-
   let response = await fetch(endpoint, {
     method: 'POST',
     headers: {
@@ -317,11 +292,9 @@ export async function createHealthCampRegistration(formData, isRetry = false) {
   });
 
   const result = await response.json();
-  console.log('📥 Zoho CRM Response:', response.status, result);
 
   // Auto-retry on 401 token expiry
   if ((response.status === 401 || result.code === 'INVALID_TOKEN') && !isRetry) {
-    console.log('🔄 Token expired during record creation. Retrying with fresh token...');
     await refreshAccessToken();
     return await createHealthCampRegistration(formData, true);
   }

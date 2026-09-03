@@ -264,7 +264,6 @@ export default function StepDemographics({ data = {}, onChange, onReset }) {
     setIsSubmitting(true);
 
     try {
-      console.log('⚡ Triggering Deluge function "otp1" to send OTP via v7 API...');
       const delugeRes = await executeDelugeFunction('otp1', {
         email: formData.email,
         phone: formData.mobileNo,
@@ -272,8 +271,6 @@ export default function StepDemographics({ data = {}, onChange, onReset }) {
         first_name: formData.firstName,
         action: 'send_otp',
       });
-
-      console.log('✅ Deluge OTP Response:', delugeRes);
 
       // Extract OTP if returned in details.output (as JSON string or object)
       const rawOutput = delugeRes?.details?.output;
@@ -288,7 +285,6 @@ export default function StepDemographics({ data = {}, onChange, onReset }) {
 
       if (parsedOutput && typeof parsedOutput === 'object' && parsedOutput.otp) {
         setServerGeneratedOtp(String(parsedOutput.otp));
-        console.log('🔑 Server OTP extracted:', parsedOutput.otp);
       } else if (typeof rawOutput === 'string') {
         const match = rawOutput.match(/\b\d{6}\b/);
         if (match) setServerGeneratedOtp(match[0]);
@@ -306,12 +302,7 @@ export default function StepDemographics({ data = {}, onChange, onReset }) {
         message: `An OTP verification code was sent to ${formData.email}`,
       });
     } catch (err) {
-      console.error('Deluge OTP Error:', err);
-      setToast({
-        type: 'error',
-        title: 'OTP Dispatch Failed',
-        message: err.message || 'Could not send OTP to your email. Please try again.',
-      });
+      setErrors({ email: err.message || 'Failed to dispatch verification OTP. Please try again.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -346,7 +337,6 @@ export default function StepDemographics({ data = {}, onChange, onReset }) {
 
       if (parsedOutput && typeof parsedOutput === 'object' && parsedOutput.otp) {
         setServerGeneratedOtp(String(parsedOutput.otp));
-        console.log('🔑 Resent Server OTP extracted:', parsedOutput.otp);
       } else if (typeof rawOutput === 'string') {
         const match = rawOutput.match(/\b\d{6}\b/);
         if (match) setServerGeneratedOtp(match[0]);
@@ -440,17 +430,12 @@ export default function StepDemographics({ data = {}, onChange, onReset }) {
           entered_otp: enteredOtp,
           otp: enteredOtp,
         });
-        console.log('Deluge Verification Response:', verifyRes);
         if (verifyRes?.details?.output?.status === 'error' || verifyRes?.details?.output?.verified === false) {
           setOtpError(verifyRes.details.output.message || 'Invalid OTP code.');
           setIsVerifying(false);
           return;
         }
-      } catch (verifyErr) {
-        console.log('Deluge verify check passed/skipped:', verifyErr);
-      }
-
-      console.log('✅ OTP Verified! Creating patient record in Zoho CRM...');
+      } catch (verifyErr) {}
 
       // 1. Create Patient Record in Zoho CRM ONLY NOW
       const res = await createPatientRecord(formData);
@@ -482,7 +467,6 @@ export default function StepDemographics({ data = {}, onChange, onReset }) {
       setTouched({});
       if (onChange) onChange(emptyState);
     } catch (err) {
-      console.error('Zoho Patient creation error after OTP:', err);
       setOtpError(err.message || 'Failed to create Patient record in Zoho CRM');
     } finally {
       setIsVerifying(false);
