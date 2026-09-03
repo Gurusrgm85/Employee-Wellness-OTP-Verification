@@ -302,15 +302,7 @@ export default function StepDemographics({ data = {}, onChange, onReset }) {
         message: `An OTP verification code was sent to ${formData.email}`,
       });
     } catch (err) {
-      const msg = err?.message || '';
-      const normalized = msg.toLowerCase();
-      const formattedMsg = (
-        normalized.includes('too many request') ||
-        normalized.includes('continuously') ||
-        normalized.includes('access denied') ||
-        normalized.includes('status 500')
-      ) ? 'Too many requests. Please try again after some time.' : (msg || 'Failed to dispatch verification OTP. Please try again.');
-      setErrors({ email: formattedMsg });
+      setErrors({ email: 'Please try after some time. If you have any queries, contact rajshree.v@zohocorp.com' });
     } finally {
       setIsSubmitting(false);
     }
@@ -357,7 +349,7 @@ export default function StepDemographics({ data = {}, onChange, onReset }) {
         message: `A fresh OTP has been sent to ${formData.email}`,
       });
     } catch (err) {
-      setOtpError('Failed to resend OTP. Please try again.');
+      setOtpError('Please try after some time. If you have any queries, contact rajshree.v@zohocorp.com');
     } finally {
       setIsResending(false);
     }

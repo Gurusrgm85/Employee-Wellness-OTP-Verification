@@ -2,6 +2,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import { executeDelugeFunction, createHealthCampRegistration } from '../services/zohoService';
 import zfhLogo from '../assets/zfh-logo.png';
 
+const SUPPORT_ERROR_MESSAGE = (
+  <>
+    Please try after some time. If you have any queries, contact{' '}
+    <a
+      href="mailto:rajshree.v@zohocorp.com"
+      style={{ color: 'inherit', textDecoration: 'underline', fontWeight: 600 }}
+    >
+      rajshree.v@zohocorp.com
+    </a>
+  </>
+);
+
 export default function WE4WERegistration() {
   const [empId, setEmpId] = useState('');
   const [email, setEmail] = useState('');
@@ -130,18 +142,7 @@ export default function WE4WERegistration() {
       setVerified(false);
       setOtpDigits(['', '', '', '', '', '']);
     } catch (err) {
-      const msg = err?.message || '';
-      const normalized = msg.toLowerCase();
-      if (
-        normalized.includes('too many request') ||
-        normalized.includes('continuously') ||
-        normalized.includes('access denied') ||
-        normalized.includes('status 500')
-      ) {
-        setCodeError('Too many requests. Please try again after some time.');
-      } else {
-        setCodeError(msg || 'Failed to dispatch verification code. Please try again.');
-      }
+      setCodeError(SUPPORT_ERROR_MESSAGE);
     } finally {
       setIsSending(false);
     }
@@ -214,7 +215,7 @@ export default function WE4WERegistration() {
       setSignedAt(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
       setIsDone(true);
     } catch (err) {
-      setSubmitError(err.message || 'Registration failed. Please check your network and try again.');
+      setSubmitError(SUPPORT_ERROR_MESSAGE);
     } finally {
       setIsSubmitting(false);
     }
