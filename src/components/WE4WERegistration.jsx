@@ -167,30 +167,14 @@ export default function WE4WERegistration() {
       const payload = {
         name: `Employee ${empId.trim()}`,
         employeeId: empId.trim(),
-        Employee_ID: empId.trim(),
         email: email.trim(),
-        Email: email.trim(),
-        enrolYes: wellnessChosen,
+        wellnessChosen: wellnessChosen,
         wellnessConsent: wellnessChosen ? wellnessConsent : false,
-        we4weEnrollment: wellnessChosen ? wellnessConsent : false,
-        We4We_Enrollment: wellnessChosen ? wellnessConsent : false,
-        WE4WE_Enrollment: wellnessChosen ? wellnessConsent : false,
-        We4we_Enrollment: wellnessChosen ? wellnessConsent : false,
-        We4We_Enrolment: wellnessChosen ? wellnessConsent : false,
-        WE4WE_programme_enrolment: wellnessChosen ? wellnessConsent : false,
         privacyConsent: privacyConsent,
-        I_have_read_the_above_notice_and_consent_to_Sugah_and_its_lab_partners: privacyConsent,
-        I_have_read_the_above_notice_and_consent_to_Sugah_and_its_lab_partner: privacyConsent,
-        I_have_read_the_above_notice_and_consent_to_Sugah_and_its_lab: privacyConsent,
-        I_have_read_the_above_notice_and_consent_to_Sugah_and_its: privacyConsent,
-        I_have_read_the_above_notice_and_consent_to_Sugah_and: privacyConsent,
-        I_have_read_the_above_notice_and_consent_to_Sugah: privacyConsent,
-        consentA: [privacyConsent, privacyConsent, privacyConsent, privacyConsent],
-        consentB: [wellnessConsent, wellnessConsent, wellnessConsent, wellnessConsent, wellnessConsent],
       };
 
       const res = await createHealthCampRegistration(payload);
-      const recordId = res?.data?.[0]?.details?.id || 'CRM-' + Math.floor(100000 + Math.random() * 900000);
+      const recordId = res?.details?.id || 'CRM-' + Math.floor(100000 + Math.random() * 900000);
       const generatedRef = 'WE4WE-' + Math.floor(100000 + Math.random() * 899999);
 
       setRefId(generatedRef);

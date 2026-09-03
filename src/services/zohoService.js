@@ -387,26 +387,10 @@ export async function createHealthCampRegistration(formData, isRetry = false) {
     throw new Error(`Zoho CRM Error (${response.status}): ${errorDetails}`);
   }
 
-  const rawRecord = result?.data?.[0] || result;
-  const recordId = rawRecord?.details?.id || rawRecord?.id || '';
-
   return {
     code: 'SUCCESS',
     status: 'success',
     message: 'Record added successfully.',
-    details: {
-      id: recordId,
-    },
-    data: [
-      {
-        code: 'SUCCESS',
-        status: 'success',
-        message: 'Record added successfully.',
-        details: {
-          id: recordId,
-        },
-      },
-    ],
   };
 }
 
