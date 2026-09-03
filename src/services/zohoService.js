@@ -169,17 +169,45 @@ export async function executeDelugeFunction(functionName = 'otp1', argsObj = {},
 
 /**
  * Triggers sending the OTP code via Catalyst server & Zoho Deluge
+ * Sends only { email, employeeId } from the browser; internal Deluge params handled on server
  */
 export async function sendOtp(email, employeeId, name) {
   const trimmedEmail = (email || '').trim();
+  const trimmedEmpId = (employeeId || '').trim();
+
+  // 1. Call dedicated Catalyst send-otp endpoint with clean payload
+  if (CONFIG.backendUrl) {
+    try {
+      const backendEndpoint = `${CONFIG.backendUrl.replace(/\/$/, '')}/zoho/send-otp`;
+      const res = await fetch(backendEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ email: trimmedEmail, employeeId: trimmedEmpId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && (data.status === 'success' || data.code === '200' || data.code === 'success')) {
+        return { status: 'success', message: data.message || 'OTP sent successfully' };
+      }
+      if (!res.ok) {
+        throw new Error(data.message || data.error || 'Failed to send verification code');
+      }
+    } catch (backendErr) {
+      if (!import.meta.env.DEV) {
+        throw backendErr;
+      }
+    }
+  }
+
+  // 2. Direct Deluge fallback if backendUrl is unreachable
   return await executeDelugeFunction('otp1', {
     email: trimmedEmail,
     phone: '9876543210',
-    name: name || `Employee ${(employeeId || '').trim()}`,
-    first_name: name || `Employee ${(employeeId || '').trim()}`,
+    name: name || `Employee ${trimmedEmpId}`,
+    first_name: name || `Employee ${trimmedEmpId}`,
     action: 'send_otp',
   });
 }
+
 
 /**
  * Verifies the OTP code server-side via Catalyst server

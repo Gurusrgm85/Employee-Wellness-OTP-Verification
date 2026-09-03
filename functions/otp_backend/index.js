@@ -295,7 +295,100 @@ router.post(['/zoho/execute-function', '/api/zoho/execute-function'], async (req
   }
 });
 
-// 3b. Dedicated Verify OTP Endpoint
+// 3b. Dedicated Clean Send OTP Endpoint (receives { email, employeeId }, handles internal Deluge keys on server)
+router.post(['/zoho/send-otp', '/api/zoho/send-otp', '/send-otp'], async (req, res) => {
+  const { email, employeeId, name } = req.body || {};
+  if (!email || !String(email).trim()) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+
+  const trimmedEmail = String(email).trim();
+  const empLabel = (name || `Employee ${(employeeId || '').trim()}`).trim();
+
+  try {
+    const delugeArgs = {
+      email: trimmedEmail,
+      phone: '9876543210',
+      name: empLabel,
+      first_name: empLabel,
+      action: 'send_otp',
+    };
+
+    const executeCall = async (token) => {
+      const config = getZohoConfig();
+      const encodedArgs = encodeURIComponent(JSON.stringify(delugeArgs));
+      const url = `${config.apiDomain}/crm/v7/functions/otp1/actions/execute?auth_type=oauth&arguments=${encodedArgs}`;
+
+      console.log('⚡ [Function] Executing Deluge [otp1] for:', trimmedEmail);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Zoho-oauthtoken ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+      return { status: response.status, data };
+    };
+
+    let token = await getValidAccessToken();
+    let result = await executeCall(token);
+
+    if (result.status === 401 || result.data?.code === 'INVALID_TOKEN') {
+      console.log('🔄 Token expired, retrying with fresh token...');
+      token = await getValidAccessToken(true);
+      result = await executeCall(token);
+    }
+
+    if (result.status >= 400) {
+      return res.status(result.status).json(result.data);
+    }
+
+    // Capture OTP server-side
+    const rawOutput = result.data?.details?.output;
+    let extractedOtp = null;
+
+    if (typeof rawOutput === 'string') {
+      try {
+        const parsed = JSON.parse(rawOutput);
+        if (parsed?.otp) extractedOtp = String(parsed.otp);
+      } catch (e) {}
+      if (!extractedOtp) {
+        const match = rawOutput.match(/\b\d{6}\b/);
+        if (match) extractedOtp = match[0];
+      }
+    } else if (rawOutput && typeof rawOutput === 'object' && rawOutput.otp) {
+      extractedOtp = String(rawOutput.otp);
+    }
+
+    if (!extractedOtp && Array.isArray(result.data?.details?.userMessage)) {
+      for (const msg of result.data.details.userMessage) {
+        const match = String(msg).match(/\b\d{6}\b/);
+        if (match) {
+          extractedOtp = match[0];
+          break;
+        }
+      }
+    }
+
+    if (extractedOtp) {
+      saveOtp(trimmedEmail, extractedOtp);
+    }
+
+    return res.json({
+      code: '200',
+      status: 'success',
+      message: 'OTP sent successfully',
+    });
+  } catch (err) {
+    console.error('Error in send-otp:', err);
+    return res.status(500).json({ error: err.message || 'Failed to send verification code' });
+  }
+});
+
+// 3c. Dedicated Verify OTP Endpoint
 router.post(['/zoho/verify-otp', '/api/zoho/verify-otp', '/verify-otp'], (req, res) => {
   const { email, otp } = req.body || {};
   if (!email || !otp) {
@@ -314,6 +407,7 @@ router.post(['/zoho/verify-otp', '/api/zoho/verify-otp', '/verify-otp'], (req, r
     message: result.message,
   });
 });
+
 
 
 // 4. Create Health Camp Registration Record in Zoho CRM
